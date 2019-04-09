@@ -4,6 +4,7 @@ sdrfFile = params.sdrf
 resultsRoot = params.resultsRoot
 referenceFasta = params.referenceFasta
 referenceGtf = params.referenceGtf
+protocol = params.protocol
 
 // Read ENA_RUN column from an SDRF
 
@@ -18,7 +19,7 @@ Channel
     }
 
 SDRF_FOR_FASTQS
-    .map{ row-> tuple(row["${params.fields.run}"], row["${params.fields.cdna_fastq}"], row["${params.fields.barcodes_fastq}"]) }
+    .map{ row-> tuple(row["${params.fields.run}"], row["${params.fields.cdna_uri}"], row["${params.fields.cell_barcode_uri}"]) }
     .set { FASTQ_RUNS }
 
 REFERENCE_FASTA = Channel.fromPath( referenceFasta, checkIfExists: true )
@@ -122,7 +123,6 @@ process salmon_index {
     """
 }
 
-
 // Run Alevin per row
 
 process alevin {
@@ -137,11 +137,18 @@ process alevin {
     output:
         set val(runId), file("${runId}_alevin") into ALEVIN_RESULTS
 
+    script:
+
+        def alevinType = ''
+
+        if ( params.containsKey(protocol) ){
+            alevinType = params.get(protocol).alevinType
+        }
+
     """
-    salmon alevin -l ISR -1 ${barcodesFastqFile} -2 ${cdnaFastqFile} --chromium -i ${indexDir} -p ${task.cpus} \
+    salmon alevin -l ISR -1 ${barcodesFastqFile} -2 ${cdnaFastqFile} --${alevinType} -i ${indexDir} -p ${task.cpus} \
         -o ${runId}_alevin --tgMap ${transcriptToGene}
     """
-
 }
 
 # Convert Alevin output to MTX
