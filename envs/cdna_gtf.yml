@@ -1,0 +1,4 @@
+name: cdna_gtf
+dependencies:
+  - bioconductor-rtracklayer
+  - bioconductor-biostrings 

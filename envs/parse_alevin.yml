@@ -1,0 +1,5 @@
+name: parse_alevin
+dependencies:
+  - pandas
+  - scipy
+  - numpy

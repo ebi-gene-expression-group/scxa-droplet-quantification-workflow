@@ -42,10 +42,10 @@ process get_cdna_filename {
     """
 }
 
-process get_cdna_filename {
+process get_barcodes_filename {
     
     executor 'local'
-
+    
     input:
         set runId, cdnaFastqURI, barcodesFastqURI, cdnaFastqFile from FASTQ_CDNA_FILES
     
@@ -69,7 +69,7 @@ process download_fastqs {
     errorStrategy { task.attempt<=10 ? 'retry' : 'finish' } 
     
     input:
-        set runId, cdnaFastqURI, barcodesFastqURI, cdnaFastqFile, barcodesFastqFile into FASTQ_CDNA_BARCODES_FILES
+        set runId, cdnaFastqURI, barcodesFastqURI, cdnaFastqFile, barcodesFastqFile from FASTQ_CDNA_BARCODES_FILES
 
     output:
         set val(runId), file("${cdnaFastqFile}"), file("${barcodesFastqFile}") into DOWNLOADED_FASTQS
@@ -92,6 +92,11 @@ process synchronise_cdna_gtf {
 
     conda "${baseDir}/envs/cdna_gtf.yml"
 
+    memory { 5.GB * task.attempt }
+
+    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 || task.attempt < 3  ? 'retry' : 'ignore' }
+    maxRetries 3
+
     input:
         file(referenceFasta) from REFERENCE_FASTA
         file(referenceGtf) from REFERENCE_GTF
@@ -111,15 +116,20 @@ process synchronise_cdna_gtf {
 process salmon_index {
 
     conda "${baseDir}/envs/alevin.yml"
+    
+    memory { 20.GB * task.attempt }
+
+    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 || task.attempt < 3  ? 'retry' : 'ignore' }
+    maxRetries 10
 
     input:
         file(referenceFasta) from REFERENCE_FASTA_CLEANED
 
     output:
-        file('salmon_index')
+        file('salmon_index') into SALMON_INDEX
 
     """
-    salmon index -t ${referenceFasta} -i salmon_index -k ${params.index.kmer_size}
+    salmon index -t ${referenceFasta} -i salmon_index -k ${params.salmon.index.kmerSize}
     """
 }
 
@@ -128,6 +138,12 @@ process salmon_index {
 process alevin {
 
     conda "${baseDir}/envs/alevin.yml"
+    
+    memory { 20.GB * task.attempt }
+    cpus 12
+
+    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 || task.attempt < 3  ? 'retry' : 'ignore' }
+    maxRetries 10
 
     input:
         file(indexDir) from SALMON_INDEX
@@ -146,16 +162,21 @@ process alevin {
         }
 
     """
-    salmon alevin -l ISR -1 ${barcodesFastqFile} -2 ${cdnaFastqFile} --${alevinType} -i ${indexDir} -p ${task.cpus} \
-        -o ${runId}_alevin --tgMap ${transcriptToGene}
+    salmon alevin -l ${params.salmon.libType} -1 ${barcodesFastqFile} -2 ${cdnaFastqFile} \
+        --${alevinType} -i ${indexDir} -p ${task.cpus} -o ${runId}_alevin --tgMap ${transcriptToGene}
     """
 }
 
-# Convert Alevin output to MTX
+// Convert Alevin output to MTX
 
 process alevin_to_mtx {
 
     conda "${baseDir}/envs/parse_alevin.yml"
+    
+    memory { 20.GB * task.attempt }
+
+    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 || task.attempt < 3  ? 'retry' : 'ignore' }
+    maxRetries 10
 
     input:
         set val(runId), file(alevinResults) from ALEVIN_RESULTS
