@@ -204,7 +204,7 @@ process alevin {
 
     """
     salmon alevin -l ${params.salmon.libType} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-        --${alevinType} -i ${indexDir} -p ${task.cpus} -o ${runId}_alevin --tgMap ${transcriptToGene}
+        --${alevinType} -i ${indexDir} -p ${task.cpus} -o ${runId} --tgMap ${transcriptToGene}
     """
 }
 
@@ -214,7 +214,7 @@ process alevin_to_mtx {
 
     conda "${baseDir}/envs/parse_alevin.yml"
     
-    memory { 20.GB * task.attempt }
+    memory { 40.GB * task.attempt }
 
     errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 || task.attempt < 3  ? 'retry' : 'ignore' }
     maxRetries 10
@@ -226,7 +226,7 @@ process alevin_to_mtx {
         file("${runId}_alevin_mtx") into ALEVIN_RESULTS_MTX
 
     """
-    alevinToMtx.py ${runId}_alevin ${runId}_alevin_mtx
+    alevinToMtx.py ${runId}/alevin ${runId}_alevin_mtx
     """ 
         
 } 
