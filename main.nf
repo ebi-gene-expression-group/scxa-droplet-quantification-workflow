@@ -170,15 +170,27 @@ process alevin {
 
     script:
 
-        def alevinType = ''
-//        if ( params.containsKey(protocol) ){
-//            alevinType = params.get(protocol).alevinType
-//        }
+        def barcodeConfig = ''
+    
+        if ( params.containsKey(protocol) ){
+            alevinType = params.get(protocol).alevinType
+            canonicalBarcodeLength = params.get(protocol).get(barcodeLength)
+            canonicalUmiLength = params.get(protocol).get(umiLength)
+            canonicalEnd = params.get(protocol).get(end)
+
+            // Non-standard barcode config is supplied as a custom method
+
+            if ( canonicalBarcodeLength != barcodeLength || canonicalUmiLength != umiLength || canonicalEnd != end ){
+                barcodeConfig = "--barcodeLength ${barcodeLength} --umiLength ${umiLength} --end ${end}" 
+            }else
+                barcodeConfig = "--$alevinType"
+            }
+        }
 
     """
     salmon alevin -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
         -l ${params.salmon.libType} --${alevinType} -i ${indexDir} -p ${task.cpus} -o ${runId} \
-        --tgMap ${transcriptToGene} --barcodeLength ${barcodeLength} --umiLength ${umiLength} --end ${end}
+        --tgMap ${transcriptToGene} ${barcodeConfig}
     """
 }
 
