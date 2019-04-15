@@ -190,7 +190,7 @@ process alevin {
     echo "Barcode length $barcodeLength (canonical ${canonicalProtocol.BarcodeLength}) UMI length $umiLength (canonical ${canonicalProtocol.umiLength}) end $end (canonical ${canonicalProtocol.End})
 
     if [ -z "$barcodeConfig" ]; then
-        echo Input of $protcol results is misconfigured 1>&2
+        echo Input of $protocol results is misconfigured 1>&2
         exit 1
     fi
 
