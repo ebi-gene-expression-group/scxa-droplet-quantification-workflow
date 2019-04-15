@@ -173,10 +173,10 @@ process alevin {
         def barcodeConfig = ''
     
         if ( params.containsKey(protocol) ){
-            alevinType = params.get(protocol).alevinType
-            canonicalBarcodeLength = params.get(protocol).get(barcodeLength)
-            canonicalUmiLength = params.get(protocol).get(umiLength)
-            canonicalEnd = params.get(protocol).get(end)
+            def alevinType = params.get(protocol).alevinType
+            def canonicalBarcodeLength = params.get(protocol).barcodeLength
+            def canonicalUmiLength = params.get(protocol).umiLength
+            def canonicalEnd = params.get(protocol).end
 
             // Non-standard barcode config is supplied as a custom method
 
@@ -189,6 +189,11 @@ process alevin {
 
     """
     echo "Barcode length $barcodeLength (canonical $canonicalBarcodeLength) UMI length $umiLength (canonical $canonicalUmiLength) end $end (canonical $canonicalEnd)
+
+    if [ -z "$barcodeConfig" ]; then
+        echo Input of $protcol results is misconfigured 1>&2
+        exit 1
+    fi
 
     salmon alevin -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
         -l ${params.salmon.libType} -i ${indexDir} -p ${task.cpus} -o ${runId} \
