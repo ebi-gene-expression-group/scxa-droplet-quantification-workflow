@@ -175,7 +175,7 @@ process alevin {
         if ( params.containsKey(protocol) ){
 
             canonicalProtocol = params.get(protocol)
-            alevinType = canonicalProtocl.alevinType
+            alevinType = canonicalProtocol.alevinType
 
             // Non-standard barcode config is supplied as a custom method
 
