@@ -179,7 +179,7 @@ process alevin {
 
             // Non-standard barcode config is supplied as a custom method
 
-            if ( canonicalProtocol.barcodeLength != barcodeLength || canonicalProtocol.umiLength != umiLength || canonicalProtocol.End != end ){
+            if ( canonicalProtocol.barcodeLength != barcodeLength || canonicalProtocol.umiLength != umiLength || canonicalProtocol.end != end ){
                 barcodeConfig = "--barcodeLength ${barcodeLength} --umiLength ${umiLength} --end ${end}" 
             }else{
                 barcodeConfig = "--$alevinType"
@@ -187,7 +187,7 @@ process alevin {
         }
 
     """
-    echo "Barcode length $barcodeLength (canonical ${canonicalProtocol.BarcodeLength}) UMI length $umiLength (canonical ${canonicalProtocol.umiLength}) end $end (canonical ${canonicalProtocol.End})
+    echo "Barcode length $barcodeLength (canonical ${canonicalProtocol.barcodeLength}) UMI length $umiLength (canonical ${canonicalProtocol.umiLength}) end $end (canonical ${canonicalProtocol.end})
 
     if [ -z "$barcodeConfig" ]; then
         echo Input of $protocol results is misconfigured 1>&2
