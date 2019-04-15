@@ -188,8 +188,10 @@ process alevin {
         }
 
     """
+    echo "Barcode length $barcodeLength (canonical $canonicalBarcodeLength) UMI length $umiLength (canonical $canonicalUmiLength) end $end (canonical $canonicalEnd)
+
     salmon alevin -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-        -l ${params.salmon.libType} --${alevinType} -i ${indexDir} -p ${task.cpus} -o ${runId} \
+        -l ${params.salmon.libType} -i ${indexDir} -p ${task.cpus} -o ${runId} \
         --tgMap ${transcriptToGene} ${barcodeConfig}
     """
 }
