@@ -193,9 +193,8 @@ process alevin {
         exit 1
     fi
 
-    salmon alevin -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-        -l ${params.salmon.libType} -i ${indexDir} -p ${task.cpus} -o ${runId} \
-        --tgMap ${transcriptToGene} ${barcodeConfig}
+    salmon alevin -l ${params.salmon.libType} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
+        ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId} --tgMap ${transcriptToGene}
     """
 }
 
