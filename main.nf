@@ -171,10 +171,9 @@ process alevin {
     script:
 
         def alevinType = ''
-
-        if ( params.containsKey(protocol) ){
-            alevinType = params.get(protocol).alevinType
-        }
+//        if ( params.containsKey(protocol) ){
+//            alevinType = params.get(protocol).alevinType
+//        }
 
     """
     salmon alevin -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
