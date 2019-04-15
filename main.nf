@@ -173,14 +173,13 @@ process alevin {
         def barcodeConfig = ''
     
         if ( params.containsKey(protocol) ){
-            def alevinType = params.get(protocol).alevinType
-            def canonicalBarcodeLength = params.get(protocol).barcodeLength
-            def canonicalUmiLength = params.get(protocol).umiLength
-            def canonicalEnd = params.get(protocol).end
+
+            canonicalProtocol = params.get(protocol)
+            alevinType = canonicalProtocl.alevinType
 
             // Non-standard barcode config is supplied as a custom method
 
-            if ( canonicalBarcodeLength != barcodeLength || canonicalUmiLength != umiLength || canonicalEnd != end ){
+            if ( canonicalProtocol.barcodeLength != barcodeLength || canonicalProtocol.umiLength != umiLength || canonicalProtocol.End != end ){
                 barcodeConfig = "--barcodeLength ${barcodeLength} --umiLength ${umiLength} --end ${end}" 
             }else{
                 barcodeConfig = "--$alevinType"
