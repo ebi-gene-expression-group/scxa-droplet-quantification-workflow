@@ -182,7 +182,7 @@ process alevin {
 
             if ( canonicalBarcodeLength != barcodeLength || canonicalUmiLength != umiLength || canonicalEnd != end ){
                 barcodeConfig = "--barcodeLength ${barcodeLength} --umiLength ${umiLength} --end ${end}" 
-            }else
+            }else{
                 barcodeConfig = "--$alevinType"
             }
         }
