@@ -171,6 +171,7 @@ process alevin {
     script:
 
         def barcodeConfig = ''
+        def mismatch = ''
     
         if ( params.containsKey(protocol) ){
 
@@ -181,13 +182,25 @@ process alevin {
 
             if ( canonicalProtocol.barcodeLength != barcodeLength || canonicalProtocol.umiLength != umiLength || canonicalProtocol.end != end ){
                 barcodeConfig = "--barcodeLength ${barcodeLength} --umiLength ${umiLength} --end ${end}" 
+            
+                if ( canonicalProtocol.barcodeLength != barcodeLength ){
+                    mismatch = "${canonicalProtocol.barcodeLength } is not ${barcodeLength}"
+                }
+                if ( canonicalProtocol.umiLength != umiLength ){
+                    mismatch = "$mismatch - ${canonicalProtocol.umiLength} is not ${umiLength}" 
+                }
+                if ( canonicalProtocol.end != end ) {
+                    mismatch = "$mismatch - ${canonicalProtocol.end} is not ${end}" 
+                }
+
+
             }else{
                 barcodeConfig = "--$alevinType"
             }
         }
 
     """
-    echo "Barcode length $barcodeLength (canonical ${canonicalProtocol.barcodeLength}) UMI length $umiLength (canonical ${canonicalProtocol.umiLength}) end $end (canonical ${canonicalProtocol.end})
+    echo -e "$mismatch\nBarcode length $barcodeLength (canonical ${canonicalProtocol.barcodeLength}) UMI length $umiLength (canonical ${canonicalProtocol.umiLength}) end $end (canonical ${canonicalProtocol.end})"
 
     if [ -z "$barcodeConfig" ]; then
         echo Input of $protocol results is misconfigured 1>&2
