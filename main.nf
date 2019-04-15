@@ -132,6 +132,8 @@ process synchronise_cdna_gtf {
 
     conda "${baseDir}/envs/cdna_gtf.yml"
 
+    cache 'deep'
+
     memory { 5.GB * task.attempt }
 
     errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 || task.attempt < 3  ? 'retry' : 'ignore' }
@@ -155,6 +157,8 @@ process synchronise_cdna_gtf {
 process salmon_index {
 
     conda "${baseDir}/envs/alevin.yml"
+
+    cache 'deep'
     
     memory { 20.GB * task.attempt }
 
