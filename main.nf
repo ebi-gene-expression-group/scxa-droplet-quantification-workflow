@@ -180,18 +180,18 @@ process alevin {
 
             // Non-standard barcode config is supplied as a custom method
 
-            if ( canonicalProtocol.barcodeLength != barcodeLength || canonicalProtocol.umiLength != umiLength || canonicalProtocol.end != end ){
+            if ( "${canonicalProtocol.barcodeLength}" != barcodeLength || "${canonicalProtocol.umiLength}" != umiLength || "${canonicalProtocol.end}" != end ){
                 barcodeConfig = "--barcodeLength ${barcodeLength} --umiLength ${umiLength} --end ${end}" 
             
-                if ( canonicalProtocol.barcodeLength != barcodeLength ){
-                    mismatch = "${canonicalProtocol.barcodeLength } is not ${barcodeLength}"
-                }
-                if ( canonicalProtocol.umiLength != umiLength ){
-                    mismatch = "$mismatch - ${canonicalProtocol.umiLength} is not ${umiLength}" 
-                }
-                if ( canonicalProtocol.end != end ) {
-                    mismatch = "$mismatch - ${canonicalProtocol.end} is not ${end}" 
-                }
+                //if ( canonicalProtocol.barcodeLength != barcodeLength ){
+                //    mismatch = "${canonicalProtocol.barcodeLength } is not ${barcodeLength}"
+                //}
+                //if ( canonicalProtocol.umiLength != umiLength ){
+                //    mismatch = "$mismatch - ${canonicalProtocol.umiLength} is not ${umiLength}" 
+                //}
+                //if ( canonicalProtocol.end != end ) {
+                //    mismatch = "$mismatch - ${canonicalProtocol.end} is not ${end}" 
+               // }
 
 
             }else{
