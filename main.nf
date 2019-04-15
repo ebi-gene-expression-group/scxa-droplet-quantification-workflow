@@ -19,44 +19,14 @@ Channel
         SDRF_FOR_COUNT
     }
 
+// Read URIs from SDRF, generate target file names, and barcode locations
+
 SDRF_FOR_FASTQS
-    .map{ row-> tuple(row["${params.fields.run}"], row["${params.fields.cdna_uri}"], row["${params.fields.cell_barcode_uri}"]) }
+    .map{ row-> tuple(row["${params.fields.run}"], row["${params.fields.cdna_uri}"], row["${params.fields.cell_barcode_uri}"], file(row["${params.fields.cdna_uri}"]).getName(), file(row["${params.fields.cell_barcode_uri}"]).getName(), row["${params.fields.cell_barcode_size}"], row["${params.fields.umi_barcode_size}"], row["${params.fields.end}"]) }
     .set { FASTQ_RUNS }
 
 REFERENCE_FASTA = Channel.fromPath( referenceFasta, checkIfExists: true )
 REFERENCE_GTF = Channel.fromPath( referenceGtf, checkIfExists: true )
-
-// Get the file names from the URLs
-
-process get_cdna_filename {
-    
-    executor 'local'
-
-    input:
-        set runId, cdnaFastqURI, barcodesFastqURI from FASTQ_RUNS
-    
-    output:
-        set val(runId), val(cdnaFastqURI), val(barcodesFastqURI), stdout into FASTQ_CDNA_FILES
-
-    """
-        basename $cdnaFastqURI | tr -d \'\\n\'
-    """
-}
-
-process get_barcodes_filename {
-    
-    executor 'local'
-    
-    input:
-        set runId, cdnaFastqURI, barcodesFastqURI, cdnaFastqFile from FASTQ_CDNA_FILES
-    
-    output:
-        set runId, val(cdnaFastqURI), val(barcodesFastqURI), val(cdnaFastqFile), stdout into FASTQ_CDNA_BARCODES_FILES
-
-    """
-        basename $barcodesFastqURI | tr -d \'\\n\'
-    """
-}
 
 // Call the download script to retrieve run fastqs
 
@@ -70,10 +40,10 @@ process download_fastqs {
     errorStrategy { task.attempt<=10 ? 'retry' : 'finish' } 
     
     input:
-        set runId, cdnaFastqURI, barcodesFastqURI, cdnaFastqFile, barcodesFastqFile from FASTQ_CDNA_BARCODES_FILES
+        set runId, cdnaFastqURI, barcodesFastqURI, cdnaFastqFile, barcodesFastqFile, val(barcodeLength), val(umiLength), val(end) from FASTQ_RUNS
 
     output:
-        set val(runId), file("${cdnaFastqFile}"), file("${barcodesFastqFile}") into DOWNLOADED_FASTQS
+        set val(runId), file("${cdnaFastqFile}"), file("${barcodesFastqFile}"), val(barcodeLength), val(umiLength), val(end) into DOWNLOADED_FASTQS
 
     """
         confPart=''
@@ -110,7 +80,7 @@ if ( params.fields.containsKey('techrep')){
 
     TECHREPS.join( DOWNLOADED_FASTQS )
         .groupTuple(by: 1)
-        .map{ row-> tuple( row[1], row[2].flatten(), row[3].flatten()) }
+        .map{ row-> tuple( row[1], row[2].flatten(), row[3].flatten(), row[4]0], row[5][0], row[6][0]) }
         .set{
             FINAL_FASTQS
         }
@@ -192,7 +162,7 @@ process alevin {
 
     input:
         file(indexDir) from SALMON_INDEX
-        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz") from FINAL_FASTQS
+        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end) from FINAL_FASTQS
         file(transcriptToGene) from TRANSCRIPT_TO_GENE
 
     output:
@@ -207,37 +177,15 @@ process alevin {
         }
 
     """
-    salmon alevin -l ${params.salmon.libType} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-        --${alevinType} -i ${indexDir} -p ${task.cpus} -o ${runId} --tgMap ${transcriptToGene}
+    salmon alevin -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
+        -l ${params.salmon.libType} --${alevinType} -i ${indexDir} -p ${task.cpus} -o ${runId} \
+        --tgMap ${transcriptToGene} --barcodeLength ${barcodeLength} --umiLength ${umiLength} --end ${end}
     """
 }
 
-// Convert Alevin output to MTX
-
-process alevin_to_mtx {
-
-    conda "${baseDir}/envs/parse_alevin.yml"
-    
-    memory { 40.GB * task.attempt }
-
-    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 || task.attempt < 3  ? 'retry' : 'ignore' }
-    maxRetries 10
-
-    input:
-        set val(runId), file(alevinResults) from ALEVIN_RESULTS
-
-    output:
-        file("${runId}_alevin_mtx") into ALEVIN_RESULTS_MTX
-
-    """
-    alevinToMtx.py ${runId} ${runId}_alevin_mtx
-    """ 
-        
-} 
-
 // Check the total number of runs we have 
 
-ALEVIN_RESULTS_MTX
+ALEVIN_RESULTS
     .count()
     .set{ ALEVIN_RESULTS_COUNT } 
 
