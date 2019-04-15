@@ -226,7 +226,7 @@ process alevin_to_mtx {
         file("${runId}_alevin_mtx") into ALEVIN_RESULTS_MTX
 
     """
-    alevinToMtx.py ${runId}/alevin ${runId}_alevin_mtx
+    alevinToMtx.py ${runId} ${runId}_alevin_mtx
     """ 
         
 } 
@@ -250,10 +250,10 @@ process validate_results {
 
     """
     if [ "$kallistoResultCount" -ne "$targetCount" ]; then
-        echo "Kallisto results count of $kallistoResultCount does not match expected results number ($targetCount)" 1>&2
+        echo "Alevin results count of $kallistoResultCount does not match expected results number ($targetCount)" 1>&2
         exit 1
     else
-        echo "Kallisto results count of $kallistoResultCount matches expected results number ($targetCount)"
+        echo "Alevin results count of $kallistoResultCount matches expected results number ($targetCount)"
     fi
     """
 }   
