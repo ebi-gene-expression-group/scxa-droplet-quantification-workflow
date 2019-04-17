@@ -212,7 +212,7 @@ process alevin {
     fi
 
     salmon alevin -l ${params.salmon.libType} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-        ${barcodeConfig} ${whitelistConfig} -i ${indexDir} -p ${task.cpus} -o ${runId} --tgMap ${transcriptToGene}
+        ${barcodeConfig} \${whitelistConfig} -i ${indexDir} -p ${task.cpus} -o ${runId} --tgMap ${transcriptToGene}
     """
 }
 
