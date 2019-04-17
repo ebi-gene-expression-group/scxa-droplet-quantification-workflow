@@ -206,7 +206,9 @@ process alevin {
         whitelistPath=$SCXA_DATA/whitelists/$whitelistFile
 
         if [ ! -e \$whitelistPath ]; then
-            echo "Please install the $protocol whitelist file to the path \$whitelistPath"
+            echo "Please install the $protocol whitelist file to the path \$whitelistPath" 1>&2
+            exit 1
+        else
             whitelistConfig="--whitelist \$whitelistPath"
         fi
     fi
