@@ -171,7 +171,8 @@ process alevin {
     script:
 
         def barcodeConfig = ''
-    
+        def whitelistFile = ''    
+
         if ( params.containsKey(protocol) ){
 
             canonicalProtocol = params.get(protocol)
@@ -184,7 +185,14 @@ process alevin {
 
             }else{
                 barcodeConfig = "--$alevinType"
+
+                // Use the whitelist where available
+
+                if ( canonicalProtocol.containsKey('whitelist') ){
+                    whitelistFile="${canonicalProtocol.whitelist}"
+                }
             }
+            
         }
 
     """
@@ -193,8 +201,18 @@ process alevin {
         exit 1
     fi
 
+    whitelistConfig=
+    if [ -n "$whitelistFile" ]; then
+        whitelistPath=$SCXA_DATA/whitelists/$whitelistFile
+
+        if [ ! -e \$whitelistPath ]; then
+            echo "Please install the $protocol whitelist file to the path \$whitelistPath"
+            whitelistConfig="--whitelist \$whitelistPath"
+        fi
+    fi
+
     salmon alevin -l ${params.salmon.libType} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-        ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId} --tgMap ${transcriptToGene}
+        ${barcodeConfig} ${whitelistConfig} -i ${indexDir} -p ${task.cpus} -o ${runId} --tgMap ${transcriptToGene}
     """
 }
 
