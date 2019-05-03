@@ -223,11 +223,11 @@ process alevin {
                     echo "... mapping rate still extremely poor at \$mapping_rate" 1>&2
                     exit 2
                 else
-                    echo "... supplying count of $cellCount to --expectCells has improved mapping rate to \$mapping_rate
+                    echo "... supplying count of $cellCount to --expectCells has improved mapping rate to \$mapping_rate"
                     mv ${runId}_tmp2 ${runId}
                 fi
             else
-                echo "... don't have a cell count for $runId to try to improve mapping rate" 1>&2
+                echo "... don't have a cell count for $runId to try to improve barcode usage" 1>&2
                 exit 2
             fi
         else
