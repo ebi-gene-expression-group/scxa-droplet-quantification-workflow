@@ -22,7 +22,7 @@ Channel
 // Read URIs from SDRF, generate target file names, and barcode locations
 
 SDRF_FOR_FASTQS
-    .map{ row-> tuple(row["${params.fields.run}"], row["${params.fields.cdna_uri}"], row["${params.fields.cell_barcode_uri}"], file(row["${params.fields.cdna_uri}"]).getName(), file(row["${params.fields.cell_barcode_uri}"]).getName(), row["${params.fields.cell_barcode_size}"], row["${params.fields.umi_barcode_size}"], row["${params.fields.end}"]) }
+    .map{ row-> tuple(row["${params.fields.run}"], row["${params.fields.cdna_uri}"], row["${params.fields.cell_barcode_uri}"], file(row["${params.fields.cdna_uri}"]).getName(), file(row["${params.fields.cell_barcode_uri}"]).getName(), row["${params.fields.cell_barcode_size}"], row["${params.fields.umi_barcode_size}"], row["${params.fields.end}"], row["${params.fields.cell_count}"]) }
     .set { FASTQ_RUNS }
 
 REFERENCE_FASTA = Channel.fromPath( referenceFasta, checkIfExists: true )
@@ -40,10 +40,10 @@ process download_fastqs {
     errorStrategy { task.attempt<=10 ? 'retry' : 'finish' } 
     
     input:
-        set runId, cdnaFastqURI, barcodesFastqURI, cdnaFastqFile, barcodesFastqFile, val(barcodeLength), val(umiLength), val(end) from FASTQ_RUNS
+        set runId, cdnaFastqURI, barcodesFastqURI, cdnaFastqFile, barcodesFastqFile, val(barcodeLength), val(umiLength), val(end), val(cellCount) from FASTQ_RUNS
 
     output:
-        set val(runId), file("${cdnaFastqFile}"), file("${barcodesFastqFile}"), val(barcodeLength), val(umiLength), val(end) into DOWNLOADED_FASTQS
+        set val(runId), file("${cdnaFastqFile}"), file("${barcodesFastqFile}"), val(barcodeLength), val(umiLength), val(end), val(cellCount) into DOWNLOADED_FASTQS
 
     """
         confPart=''
@@ -162,7 +162,7 @@ process alevin {
 
     input:
         file(indexDir) from SALMON_INDEX
-        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end) from FINAL_FASTQS
+        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end), val(cellCount) from FINAL_FASTQS
         file(transcriptToGene) from TRANSCRIPT_TO_GENE
 
     output:
@@ -195,7 +195,48 @@ process alevin {
     fi
 
     salmon alevin -l ${params.salmon.libType} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-        ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId} --tgMap ${transcriptToGene}
+        ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_tmp --tgMap ${transcriptToGene} --dumpFeatures
+ 
+    # Check the output mapping rate
+    
+    mapping_rate=\$(cat ${runId}_tmp/aux_info/alevin_meta_info.json | grep "mapping_rate" | sed 's/[^0-9\\.]*//g')
+    total_reads=\$(cat ${runId}_tmp/aux_info/alevin_meta_info.json | grep "total_reads" | sed 's/[^0-9]*//g')
+    noisy_reads=\$(cat ${runId}_tmp/aux_info/alevin_meta_info.json | grep "noisy_cb_reads" | sed 's/[^0-9]*//g')
+    noisy_rate = $(echo "\$noisy_cb_reads / \$total_reads" | bc -l)
+
+    if (( \$(echo "\$mapping_rate < 50" |bc -l) )); then
+        
+        echo "Mapping rate is very poor at \$mapping_rate" 1>&2
+        
+        if (( \$(echo "\$noisy_rate > 0.2" |bc -l) )); then
+            echo "... poor mapping rate likely due to noisy barcodes (\$noisy_rate)" 1>&2
+            
+            if [ -n "$cellCount" ]; then 
+                echo "... trying again with provided cell count of $cellCount" 1>&2
+    
+                salmon alevin -l ${params.salmon.libType} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
+                    ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_tmp2 --tgMap ${transcriptToGene} --dumpFeatures --expectCells $cellCount
+           
+                mapping_rate=\$(cat ${runId}_tmp2/aux_info/alevin_meta_info.json | grep "mapping_rate" | sed 's/[^0-9\\.]*//g')
+
+                if (( \$(echo "\$mapping_rate < 50" |bc -l) )); then
+                    echo "... mapping rate still extremely poor at \$mapping_rate" 1>&2
+                    exit 2
+                else
+                    echo "... supplying count of $cellCount to --expectCells has improved mapping rate to \$mapping_rate
+                    mv ${runId}_tmp2 ${runId}
+                fi
+            else
+                echo "... don't have a cell count for $runId to try to improve mapping rate" 1>&2
+                exit 2
+            fi
+        else
+            echo "... poor mapping not due to noisy barcodes- you have a bigger problem" 1>&2      
+        fi
+    else
+        echo "Mapping rate acceptable at \$mapping_rate"
+        mv ${runId}_tmp ${runId}
+    fi
     """
 }
 
