@@ -157,7 +157,7 @@ process alevin {
     memory { 20.GB * task.attempt }
     cpus 12
 
-    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 || task.attempt < 3  ? 'retry' : 'ignore' }
+    errorStrategy { task.exitStatus !=2 && (task.exitStatus == 130 || task.exitStatus == 137 || task.attempt < 3)  ? 'retry' : 'ignore' }
     maxRetries 10
 
     input:
@@ -232,6 +232,7 @@ process alevin {
             fi
         else
             echo "... poor mapping not due to noisy barcodes- you have a bigger problem" 1>&2      
+            exit 2
         fi
     else
         echo "Mapping rate acceptable at \$mapping_rate"
