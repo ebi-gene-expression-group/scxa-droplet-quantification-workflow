@@ -201,7 +201,7 @@ process alevin {
     
     mapping_rate=\$(cat ${runId}_tmp/aux_info/alevin_meta_info.json | grep "mapping_rate" | sed 's/[^0-9\\.]*//g')
     total_reads=\$(cat ${runId}_tmp/aux_info/alevin_meta_info.json | grep "total_reads" | sed 's/[^0-9]*//g')
-    noisy_reads=\$(cat ${runId}_tmp/aux_info/alevin_meta_info.json | grep "noisy_cb_reads" | sed 's/[^0-9]*//g')
+    noisy_cb_reads=\$(cat ${runId}_tmp/aux_info/alevin_meta_info.json | grep "noisy_cb_reads" | sed 's/[^0-9]*//g')
     noisy_rate=\$(echo "\$noisy_cb_reads / \$total_reads" | bc -l)
 
     if (( \$(echo "\$mapping_rate < 50" |bc -l) )); then
