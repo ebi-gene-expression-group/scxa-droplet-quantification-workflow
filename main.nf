@@ -214,7 +214,7 @@ process alevin {
         echo "Mapping rate is very poor at \$mapping_rate" 1>&2
         
         if (( \$(echo "\$noisy_rate > 0.2" |bc -l) )); then
-            echo "... poor mapping rate likely due to noisy barcodes (\$noisy_rate)" 1>&2
+            echo "... poor mapping rate likely due to noisy barcodes (\$noisy_rate). You may want to plot the data in raw_cb_frequency.txt" 1>&2
             exit 2
         else
             echo "... poor mapping not due to noisy barcodes- there may be a bigger problem" 1>&2      
