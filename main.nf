@@ -194,8 +194,13 @@ process alevin {
         exit 1
     fi
 
+    cellCountPart=
+    if [ -n "$cellCount" ]; then 
+        cellCountPart="--expectCells $cellCount"
+    fi
+
     salmon alevin -l ${params.salmon.libType} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-        ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_tmp --tgMap ${transcriptToGene} --dumpFeatures
+        ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_tmp --tgMap ${transcriptToGene} --dumpFeatures \$cellCountPart
  
     # Check the output mapping rate
     
@@ -204,35 +209,16 @@ process alevin {
     noisy_cb_reads=\$(cat ${runId}_tmp/aux_info/alevin_meta_info.json | grep "noisy_cb_reads" | sed 's/[^0-9]*//g')
     noisy_rate=\$(echo "\$noisy_cb_reads / \$total_reads" | bc -l)
 
-    if (( \$(echo "\$mapping_rate < 50" |bc -l) )); then
+    if (( \$(echo "\$mapping_rate < ${params.minMappingRate}" |bc -l) )); then
         
         echo "Mapping rate is very poor at \$mapping_rate" 1>&2
         
         if (( \$(echo "\$noisy_rate > 0.2" |bc -l) )); then
             echo "... poor mapping rate likely due to noisy barcodes (\$noisy_rate)" 1>&2
-            
-            if [ -n "$cellCount" ]; then 
-                echo "... trying again with provided cell count of $cellCount" 1>&2
-    
-                salmon alevin -l ${params.salmon.libType} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-                    ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_tmp2 --tgMap ${transcriptToGene} --dumpFeatures --expectCells $cellCount
-           
-                mapping_rate=\$(cat ${runId}_tmp2/aux_info/alevin_meta_info.json | grep "mapping_rate" | sed 's/[^0-9\\.]*//g')
-
-                if (( \$(echo "\$mapping_rate < 50" |bc -l) )); then
-                    echo "... mapping rate still extremely poor at \$mapping_rate" 1>&2
-                    exit 2
-                else
-                    echo "... supplying count of $cellCount to --expectCells has improved mapping rate to \$mapping_rate"
-                    mv ${runId}_tmp2 ${runId}
-                fi
-            else
-                echo "... don't have a cell count for $runId to try to improve barcode usage" 1>&2
-                exit 2
-            fi
-        else
-            echo "... poor mapping not due to noisy barcodes- you have a bigger problem" 1>&2      
             exit 2
+        else
+            echo "... poor mapping not due to noisy barcodes- there may be a bigger problem" 1>&2      
+            exit 3
         fi
     else
         echo "Mapping rate acceptable at \$mapping_rate"
