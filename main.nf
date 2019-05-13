@@ -229,8 +229,8 @@ process alevin {
         fi
     else
         echo "Mapping rate acceptable at \$mapping_rate"
-        mv ${runId}_tmp ${runId}
     fi
+    mv ${runId}_tmp ${runId}
     """
 }
 
