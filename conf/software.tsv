@@ -1,2 +1,3 @@
 Analysis	Software	Environment	Package	Citation
 Barcode detection and whitelisting, read mapping, UMI deduplication, Gene/transcript quantification	Alevin	alevin	salmon	Srivastava A, Malik L, Smith T, Sudbery I, Patro R. Alevin efficiently estimates accurate gene abundances from dscRNA-seq data. Genome Biol. 2019;20(1):65.
+Emtpy droplet filtering	DropletUtils	dropletutils	bioconductor-dropletutils	Lun ATL, Riesenfeld S, Andrews T, et al. EmptyDrops: distinguishing cells from empty droplets in droplet-based single-cell RNA sequencing data. Genome Biol. 2019;20(1):63.

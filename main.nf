@@ -152,8 +152,6 @@ process alevin {
 
     conda "${baseDir}/envs/alevin.yml"
 
-    publishDir "$resultsRoot/alevin", mode: 'copy', overwrite: true
-    
     memory { 20.GB * task.attempt }
     cpus 12
 
@@ -234,9 +232,115 @@ process alevin {
     """
 }
 
+ALEVIN_RESULTS
+    .into{
+        ALEVIN_RESULTS_FOR_PROCESSING
+        ALEVIN_RESULTS_FOR_OUTPUT
+    }
+
+// Convert Alevin output to MTX. There will be one of these for every run, or
+// technical replicate group of runs
+
+process alevin_to_mtx {
+
+    conda "${baseDir}/envs/parse_alevin.yml"
+    
+    memory { 10.GB * task.attempt }
+    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
+    maxRetries 20
+
+    input:
+        set val(runId), file(alevinResult) from ALEVIN_RESULTS_FOR_PROCESSING
+
+    output:
+        set val(runId), file("counts_mtx") into ALEVIN_MTX
+
+    """
+    alevinToMtx.py --cell_prefix \${runId}- $alevinResult counts_mtx
+    """ 
+}
+
+ALEVIN_MTX
+    .into{
+        ALEVIN_MTX_FOR_EMTPYDROPS
+        ALEVIN_MTX_FOR_OUTPUT
+    }
+
+// Remove empty droplets from Alevin results
+
+process remove_empty_drops {
+    
+    conda "${baseDir}/envs/dropletutils.yml"
+
+    memory { 10.GB * task.attempt }
+    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
+    maxRetries 20
+   
+    input:
+        set val(runId), file(countsMtx) from ALEVIN_MTX_FOR_EMPTYDROPS
+
+    output:
+        set val(runId), file('nonemtpy.rds') into NONEMPTY_RDS
+
+    """
+        dropletutils-read-10x-counts.R -s counts_mtx -c TRUE -o matrix.rds
+        dropletutils-empty-drops.R -i matrix.rds -l ${params.emptyDrops.lower} -niters ${params.emptyDrops.niters} -f ${params.emptyDrops.filter-empty} \
+            -d ${params.emptyDrops.filter-fdr} -o nonempty.rds
+    """
+}
+
+// Convert R matrix object with filtered cells back to .mtx
+
+process rds_to_mtx{
+
+    conda "${baseDir}/envs/dropletutils.yml"
+
+    memory { 10.GB * task.attempt }
+    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
+    maxRetries 20
+   
+    input:
+        set val(runId), file(rds) from NONEMPTY_RDS
+
+    output:
+        set val(runId), file("counts_mtx_nonempty") into NONEMPTY_MTX
+
+    """ 
+        #!/usr/bin/env Rscript
+        
+        suppressPackageStartupMessages(require(DropletUtils))
+
+        counts_sce <- readRDS('$rds')
+        write10xCounts(assays(counts_sce)[[1]], path = 'counts_mtx_nonempty', barcodes = colData(counts_sce)\$Barcode, gene.id = rownames(counts_sce))
+    """
+
+// Compile raw results with raw and emptyDrops-filtered MTX
+
+ALEVIN_RESULTS_FOR_OUTPUT
+    .join(ALEVIN_MTX_FOR_OUTPUT)
+    .join(NONEMPTY_MTX)
+    .set{ COMPILED_RESULTS }
+
+process compile_results{
+
+    publishDir "$resultsRoot/alevin", mode: 'copy', overwrite: true
+    
+    input:
+        set val(runId), file('raw_alevin'), file(countsMtx), file(countsMtxNonempty) from COMPILED_RESULTS
+
+    output:
+        set val(runId), file("$runId") into RESULTS_FOR_COUNTING
+
+    """
+        mkdir -p raw_alevin/alevin/mtx
+        cp -P $countsMtx $countsMtxNonempty raw_alevin/alevin/mtx 
+        cp -P raw_alevin $runId
+    """
+}
+
 // Check the total number of runs we have 
 
-ALEVIN_RESULTS
+RESULTS_FOR_COUNTING
     .count()
     .set{ ALEVIN_RESULTS_COUNT } 
 
