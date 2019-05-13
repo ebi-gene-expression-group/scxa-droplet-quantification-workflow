@@ -202,7 +202,7 @@ process alevin {
     # Derive a relaxed whitelist, removing only the most obvious junk 
 
     if [ \$? -eq 0 ]; then 
-        awk '{ if ($2 > ${params.minCbFreq }) { print $1} }' ${runId}_pre/alevin/raw_cb_frequency.txt > pre_whitelist.txt
+        awk '{ if (\$2 > ${params.minCbFreq }) { print \$1} }' ${runId}_pre/alevin/raw_cb_frequency.txt > pre_whitelist.txt
     fi
 
     # Supply the whitelist to the main Alevin run
