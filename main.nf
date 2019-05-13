@@ -197,7 +197,7 @@ process alevin {
     # Do a pre-run to derive a starting whitelist, see https://github.com/COMBINE-lab/salmon/issues/362
 
     salmon alevin -l ${params.salmon.libType} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-        ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_pre --tgMap ${transcriptToGene} --dumpFeatures \$cellCountPart --noQuant
+        ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_pre --tgMap ${transcriptToGene} --dumpFeatures --noQuant
     
     # Derive a relaxed whitelist, removing only the most obvious junk 
 
