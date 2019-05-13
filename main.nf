@@ -262,7 +262,7 @@ process alevin_to_mtx {
 
 ALEVIN_MTX
     .into{
-        ALEVIN_MTX_FOR_EMTPYDROPS
+        ALEVIN_MTX_FOR_EMPTYDROPS
         ALEVIN_MTX_FOR_OUTPUT
     }
 
