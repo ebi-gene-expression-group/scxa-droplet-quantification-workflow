@@ -313,6 +313,7 @@ process rds_to_mtx{
         counts_sce <- readRDS('$rds')
         write10xCounts(assays(counts_sce)[[1]], path = 'counts_mtx_nonempty', barcodes = colData(counts_sce)\$Barcode, gene.id = rownames(counts_sce))
     """
+}
 
 // Compile raw results with raw and emptyDrops-filtered MTX
 
