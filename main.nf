@@ -257,7 +257,7 @@ process alevin_to_mtx {
         set val(runId), file("counts_mtx") into ALEVIN_MTX
 
     """
-    alevinToMtx.py --cell_prefix \${runId}- $alevinResult counts_mtx
+    alevinToMtx.py --cell_prefix ${runId}- $alevinResult counts_mtx
     """ 
 }
 
