@@ -151,6 +151,8 @@ process salmon_index {
 process alevin {
 
     conda "${baseDir}/envs/alevin.yml"
+    
+    cache 'deep'
 
     memory { 20.GB * task.attempt }
     cpus 12
