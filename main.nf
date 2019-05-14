@@ -263,7 +263,7 @@ process remove_empty_drops {
         set val(runId), file(countsMtx) from ALEVIN_MTX_FOR_EMPTYDROPS
 
     output:
-        set val(runId), file('nonemtpy.rds') into NONEMPTY_RDS
+        set val(runId), file('nonempty.rds') into NONEMPTY_RDS
 
     """
         dropletutils-read-10x-counts.R -s counts_mtx -c TRUE -o matrix.rds
