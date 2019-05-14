@@ -1,0 +1,3 @@
+name: dropletutils
+dependencies:
+  - bioconductor-dropletutils=1.2.1
