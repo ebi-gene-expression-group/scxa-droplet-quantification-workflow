@@ -267,8 +267,8 @@ process remove_empty_drops {
 
     """
         dropletutils-read-10x-counts.R -s counts_mtx -c TRUE -o matrix.rds
-        dropletutils-empty-drops.R -i matrix.rds --lower ${params.emptyDrops.lower} --niters ${params.emptyDrops.nIters} --filter-emtpy ${params.emptyDrops.filterEmpty} \
-            --filter-fdr ${params.emptyDrops.filterFdr} -o nonempty.rds
+        dropletutils-empty-drops.R -i matrix.rds --lower ${params.emptyDrops.lower} --niters ${params.emptyDrops.nIters} --filter-empty ${params.emptyDrops.filterEmpty} \
+            --filter-fdr ${params.emptyDrops.filterFdr} -o nonempty.rds -t nonempty.txt
     """
 }
 
