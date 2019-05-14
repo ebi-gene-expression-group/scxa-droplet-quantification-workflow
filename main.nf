@@ -198,7 +198,7 @@ process alevin {
 
     salmon alevin -l ${params.salmon.libType} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
         ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_pre --tgMap ${transcriptToGene} --dumpFeatures --noQuant
-    
+   
     # Derive a relaxed whitelist, removing only the most obvious junk 
 
     if [ \$? -eq 0 ]; then 
@@ -211,26 +211,6 @@ process alevin {
         ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_tmp --tgMap ${transcriptToGene} --whitelist pre_whitelist.txt \
         --forceCells \$(cat pre_whitelist.txt | wc -l | tr -d '\\n')
  
-    # Check the output mapping rate
-    
-    mapping_rate=\$(cat ${runId}_tmp/aux_info/alevin_meta_info.json | grep "mapping_rate" | sed 's/[^0-9\\.]*//g')
-    total_reads=\$(cat ${runId}_tmp/aux_info/alevin_meta_info.json | grep "total_reads" | sed 's/[^0-9]*//g')
-    noisy_cb_reads=\$(cat ${runId}_tmp/aux_info/alevin_meta_info.json | grep "noisy_cb_reads" | sed 's/[^0-9]*//g')
-    noisy_rate=\$(echo "\$noisy_cb_reads / \$total_reads" | bc -l)
-
-    if (( \$(echo "\$mapping_rate < ${params.minMappingRate}" |bc -l) )); then
-        
-        echo "Mapping rate is very poor at \$mapping_rate" 1>&2
-        
-        if (( \$(echo "\$noisy_rate > 0.2" |bc -l) )); then
-            echo "... poor mapping rate likely due to noisy barcodes (\$noisy_rate). You may want to plot the data in raw_cb_frequency.txt" 1>&2
-        else
-            echo "... poor mapping not due to noisy barcodes- there may be a bigger problem" 1>&2      
-            exit 2
-        fi
-    else
-        echo "Mapping rate acceptable at \$mapping_rate"
-    fi
     mv ${runId}_tmp ${runId}
     """
 }
