@@ -1,3 +1,3 @@
 name: dropletutils
 dependencies:
-  - dropletutils-scripts=0.0.1
+  - dropletutils-scripts=0.0.2
