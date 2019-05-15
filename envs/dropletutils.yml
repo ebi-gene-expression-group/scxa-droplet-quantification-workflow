@@ -1,3 +1,4 @@
 name: dropletutils
 dependencies:
+  - bioconductor-dropletutils=1.0.3
   - dropletutils-scripts=0.0.2
