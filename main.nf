@@ -80,7 +80,7 @@ if ( params.fields.containsKey('techrep')){
 
     TECHREPS.join( DOWNLOADED_FASTQS )
         .groupTuple(by: 1)
-        .map{ row-> tuple( row[1], row[2].flatten(), row[3].flatten(), row[4][0], row[5][0], row[6][0]) }
+        .map{ row-> tuple( row[1], row[2].flatten(), row[3].flatten(), row[4][0], row[5][0], row[6][0], row[7][0]) }
         .set{
             FINAL_FASTQS
         }
