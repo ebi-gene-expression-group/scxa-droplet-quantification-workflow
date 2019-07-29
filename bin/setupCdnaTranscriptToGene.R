@@ -14,7 +14,12 @@ filtered_cdna_file <- cl[4]
 
 annotation <- elementMetadata(import(gtf_file))
 annotation <- subset(annotation, ! (is.na(transcript_id) | is.na(gene_id)))
-mapping <- cbind(paste(annotation$transcript_id, annotation$transcript_version, sep='.'), annotation$gene_id)
+
+if ('transcript_version' %in% colnames(annotation)){
+  mapping <- cbind(paste(annotation$transcript_id, annotation$transcript_version, sep='.'), annotation$gene_id)
+}else{
+  mapping <- annotation[,c('transcript_id', 'gene_id')]
+}
 
 # Read the cDNA
 
