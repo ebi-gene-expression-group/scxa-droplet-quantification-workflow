@@ -194,22 +194,10 @@ process alevin {
         exit 1
     fi
 
-    # Do a pre-run to derive a starting whitelist, see https://github.com/COMBINE-lab/salmon/issues/362
+    # Run Alevin
 
     salmon alevin -l ${params.salmon.libType} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-        ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_pre --tgMap ${transcriptToGene} --dumpFeatures --noQuant
-   
-    # Derive a relaxed whitelist, removing only the most obvious junk 
-
-    if [ \$? -eq 0 ]; then 
-        awk '{ if (\$2 > ${params.minCbFreq }) { print \$1} }' ${runId}_pre/alevin/raw_cb_frequency.txt > pre_whitelist.txt
-    fi
-
-    # Supply the whitelist to the main Alevin run
-
-    salmon alevin -l ${params.salmon.libType} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-        ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_tmp --tgMap ${transcriptToGene} --whitelist pre_whitelist.txt \
-        --forceCells \$(cat pre_whitelist.txt | wc -l | tr -d '\\n')
+        ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_tmp --tgMap ${transcriptToGene} --keepCBFraction 1 --freqThreshold 10
  
     mv ${runId}_tmp ${runId}
     """
