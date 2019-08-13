@@ -166,7 +166,7 @@ process alevin {
         file(transcriptToGene) from TRANSCRIPT_TO_GENE
 
     output:
-        set val(runId), file("${runId}") into ALEVIN_RESULTS
+        set val(runId), file("${runId}"),  file("${runId}_pre/alevin/raw_cb_frequency.txt") into ALEVIN_RESULTS
 
     script:
 
@@ -217,6 +217,7 @@ process alevin {
 
 ALEVIN_RESULTS
     .into{
+        ALEVIN_RESULTS_FOR_QC
         ALEVIN_RESULTS_FOR_PROCESSING
         ALEVIN_RESULTS_FOR_OUTPUT
     }
@@ -245,9 +246,39 @@ process alevin_to_mtx {
 
 ALEVIN_MTX
     .into{
+        ALEVIN_MTX_FOR_QC
         ALEVIN_MTX_FOR_EMPTYDROPS
         ALEVIN_MTX_FOR_OUTPUT
     }
+
+// Make a diagnostic plot
+
+ALEVIN_RESULTS_FOR_QC
+    .join(ALEVIN_MTX_FOR_QC)
+    .set{
+        ALEVIN_QC_INPUTS
+    }
+
+process droplet_qc_plot{
+    
+    publishDir "$resultsRoot/alevin/qc", mode: 'copy', overwrite: true
+    
+    conda "${baseDir}/envs/parse_alevin.yml"
+    
+    memory { 10.GB * task.attempt }
+    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
+    maxRetries 20
+
+    input:
+        set val(runId), file(alevinResult), file(raw_bc_freq), file(mtx) from ALEVIN_QC_INPUTS
+
+    output:
+        set val(runId), file("${runId}.png") into ALEVIN_QC_PLOTS
+
+    """
+    dropletBarcodePlot.R $raw_bc_freq $mtx $runId ${runId}.png
+    """ 
+}
 
 // Remove empty droplets from Alevin results
 
@@ -256,7 +287,7 @@ process remove_empty_drops {
     conda "${baseDir}/envs/dropletutils.yml"
 
     memory { 10.GB * task.attempt }
-    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
+    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'ignore' }
     maxRetries 20
    
     input:
@@ -268,7 +299,7 @@ process remove_empty_drops {
     """
         dropletutils-read-10x-counts.R -s counts_mtx -c TRUE -o matrix.rds
         dropletutils-empty-drops.R -i matrix.rds --lower ${params.emptyDrops.lower} --niters ${params.emptyDrops.nIters} --filter-empty ${params.emptyDrops.filterEmpty} \
-            --filter-fdr ${params.emptyDrops.filterFdr} -o nonempty.rds -t nonempty.txt
+            --filter-fdr ${params.emptyDrops.filterFdr} --ignore ${params.minCbFreq} -o nonempty.rds -t nonempty.txt
     """
 }
 
