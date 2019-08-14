@@ -263,7 +263,7 @@ process droplet_qc_plot{
     
     publishDir "$resultsRoot/alevin/qc", mode: 'copy', overwrite: true
     
-    conda "${baseDir}/envs/parse_alevin.yml"
+    conda "${baseDir}/envs/alevin.yml"
     
     memory { 10.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
