@@ -49,7 +49,7 @@ barcode_density_plot = function(bcs, roryk_cutoff, knee, inflection, name = 'no 
   counts = bcs_hist$count
   mids = bcs_hist$mids
   y = counts * (10^mids) / sum(counts * (10^mids))
-  qplot(y, 10^mids) + geom_point() + theme_bw() + ggtitle(label) + ylab('Count') + xlab ('Density') +
+  qplot(y, 10^mids) + geom_point() + theme_bw() + ggtitle(name) + ylab('Count') + xlab ('Density') +
     geom_hline(aes(yintercept = roryk_cutoff, color = paste('roryk_cutoff =', length(which(bcs > roryk_cutoff)), 'cells'))) + 
     geom_hline(aes(yintercept = inflection, color = paste('dropletutils_inflection =', length(which(bcs > inflection)), 'cells'))) +
     geom_hline(aes(yintercept = knee, color = paste('dropletutils_knee =', length(which(bcs > knee)), 'cells'))) +
@@ -63,7 +63,7 @@ barcode_rank_plot <- function(br.out, roryk_total_cutoff, knee, inflection, name
     geom_hline(aes(yintercept = knee, color = 'dropletutils_knee')) + 
     geom_hline(aes(yintercept = inflection, color = 'dropletutils_inflection')) +
     geom_hline(aes(yintercept = roryk_total_cutoff, color = 'roryk_cutoff')) +
-    ggtitle(label) + ylab('Count') + xlab('Rank') + theme(legend.position = "none")
+    ggtitle(name) + ylab('Count') + xlab('Rank') + theme(legend.position = "none")
 }
 
 # Plot the different plots and threshold statistics alongside one another
