@@ -69,7 +69,7 @@ barcode_rank_plot <- function(br.out, roryk_total_cutoff, knee, inflection, name
 # Plot the different plots and threshold statistics alongside one another
 
 raw_barcodes <- read.delim(barcode_file, header = FALSE)
-result_matrix <- read10xCounts(result_matix)  
+result_matrix <- read10xCounts(result_matrix)  
 processed_barcode_counts <- data.frame(V1 = colData(result_matrix)$Barcode, V2=colSums(assays(result_matrix)[[1]]))
 processed_barcode_counts <- processed_barcode_counts[order(processed_barcode_counts$V2, decreasing = TRUE), ]
 
@@ -80,7 +80,7 @@ barcode_results <- list(
 
 plots <- lapply(names(barcode_results), function(name){
   
-  barcodes <- barcodes_results[[name]]  
+  barcodes <- barcode_results[[name]]  
   
   # Get the roryk cutoff
   roryk_count_cutoff <- pick_roryk_cutoff(barcodes$V2)
@@ -96,7 +96,7 @@ plots <- lapply(names(barcode_results), function(name){
     roryk = barcode_density_plot(barcodes$V2, roryk_count_cutoff, dropletutils_knee, dropletutils_inflection, name = paste(label, name))
   )
 })
-names(plots) <- names(barcode_files)
+names(plots) <- names(barcode_results)
 
 png(width = 1000, height = 800, file=output_plot_file)
 grid.arrange(plots$raw$dropletutils, plots$raw$roryk, plots$processed$dropletutils, plots$processed$roryk, nrow=2)
