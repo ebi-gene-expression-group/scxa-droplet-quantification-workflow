@@ -234,7 +234,7 @@ process alevin_to_mtx {
     maxRetries 20
 
     input:
-        set val(runId), file(alevinResult) from ALEVIN_RESULTS_FOR_PROCESSING
+        set val(runId), file(alevinResult), file(rawBarcodeFreq) from ALEVIN_RESULTS_FOR_PROCESSING
 
     output:
         set val(runId), file("counts_mtx") into ALEVIN_MTX
@@ -270,13 +270,13 @@ process droplet_qc_plot{
     maxRetries 20
 
     input:
-        set val(runId), file(alevinResult), file(raw_bc_freq), file(mtx) from ALEVIN_QC_INPUTS
+        set val(runId), file(alevinResult), file(rawBarcodeFreq), file(mtx) from ALEVIN_QC_INPUTS
 
     output:
         set val(runId), file("${runId}.png") into ALEVIN_QC_PLOTS
 
     """
-    dropletBarcodePlot.R $raw_bc_freq $mtx $runId ${runId}.png
+    dropletBarcodePlot.R $rawBarcodeFreq $mtx $runId ${runId}.png
     """ 
 }
 
@@ -341,7 +341,7 @@ process compile_results{
     publishDir "$resultsRoot/alevin", mode: 'copy', overwrite: true
     
     input:
-        set val(runId), file('raw_alevin'), file(countsMtx), file(countsMtxNonempty) from COMPILED_RESULTS
+        set val(runId), file('raw_alevin'), file(rawBarcodeFreq), file(countsMtx), file(countsMtxNonempty) from COMPILED_RESULTS
 
     output:
         set val(runId), file("$runId") into RESULTS_FOR_COUNTING
