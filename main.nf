@@ -261,8 +261,6 @@ ALEVIN_RESULTS_FOR_QC
 
 process droplet_qc_plot{
     
-    publishDir "$resultsRoot/alevin/qc", mode: 'copy', overwrite: true
-    
     conda "${baseDir}/envs/alevin.yml"
     
     memory { 10.GB * task.attempt }
@@ -334,6 +332,7 @@ process rds_to_mtx{
 ALEVIN_RESULTS_FOR_OUTPUT
     .join(ALEVIN_MTX_FOR_OUTPUT)
     .join(NONEMPTY_MTX)
+    .join(ALEVIN_QC_PLOTS)
     .set{ COMPILED_RESULTS }
 
 process compile_results{
@@ -341,7 +340,7 @@ process compile_results{
     publishDir "$resultsRoot/alevin", mode: 'copy', overwrite: true
     
     input:
-        set val(runId), file('raw_alevin'), file(rawBarcodeFreq), file(countsMtx), file(countsMtxNonempty) from COMPILED_RESULTS
+        set val(runId), file('raw_alevin'), file(rawBarcodeFreq), file(countsMtx), file(countsMtxNonempty), file(qcPlot) from COMPILED_RESULTS
 
     output:
         set val(runId), file("$runId") into RESULTS_FOR_COUNTING
@@ -349,6 +348,8 @@ process compile_results{
     """
         mkdir -p raw_alevin/alevin/mtx
         cp -P $countsMtx $countsMtxNonempty raw_alevin/alevin/mtx 
+        mkdir -p raw_alevin/alevin/qc
+        cp -P $qcPlot raw_alevin/alevin/qc
         cp -P raw_alevin $runId
     """
 }
