@@ -209,7 +209,7 @@ process alevin {
 
     salmon alevin -l ${params.salmon.libType} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
         ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_tmp --tgMap ${transcriptToGene} --whitelist pre_whitelist.txt \
-        --forceCells \$(cat pre_whitelist.txt | wc -l | tr -d '\\n')
+        --forceCells \$(cat pre_whitelist.txt | wc -l | tr -d '\\n') --dumpMtx
  
     mv ${runId}_tmp ${runId}
     """
@@ -234,13 +234,13 @@ process alevin_to_mtx {
     maxRetries 20
 
     input:
-        set val(runId), file(alevinResult) from ALEVIN_RESULTS_FOR_PROCESSING
+        set val(runId), file(alevinResult), file(rawBarcodeFreq) from ALEVIN_RESULTS_FOR_PROCESSING
 
     output:
         set val(runId), file("counts_mtx") into ALEVIN_MTX
 
     """
-    alevinToMtx.py --cell_prefix ${runId}- $alevinResult counts_mtx
+    alevinMtxTo10x.py --cell_prefix ${runId}- $alevinResult counts_mtx
     """ 
 }
 
@@ -261,8 +261,6 @@ ALEVIN_RESULTS_FOR_QC
 
 process droplet_qc_plot{
     
-    publishDir "$resultsRoot/alevin/qc", mode: 'copy', overwrite: true
-    
     conda "${baseDir}/envs/alevin.yml"
     
     memory { 10.GB * task.attempt }
@@ -270,13 +268,13 @@ process droplet_qc_plot{
     maxRetries 20
 
     input:
-        set val(runId), file(alevinResult), file(raw_bc_freq), file(mtx) from ALEVIN_QC_INPUTS
+        set val(runId), file(alevinResult), file(rawBarcodeFreq), file(mtx) from ALEVIN_QC_INPUTS
 
     output:
         set val(runId), file("${runId}.png") into ALEVIN_QC_PLOTS
 
     """
-    dropletBarcodePlot.R $raw_bc_freq $mtx $runId ${runId}.png
+    dropletBarcodePlot.R $rawBarcodeFreq $mtx $runId ${runId}.png
     """ 
 }
 
@@ -334,6 +332,7 @@ process rds_to_mtx{
 ALEVIN_RESULTS_FOR_OUTPUT
     .join(ALEVIN_MTX_FOR_OUTPUT)
     .join(NONEMPTY_MTX)
+    .join(ALEVIN_QC_PLOTS)
     .set{ COMPILED_RESULTS }
 
 process compile_results{
@@ -341,7 +340,7 @@ process compile_results{
     publishDir "$resultsRoot/alevin", mode: 'copy', overwrite: true
     
     input:
-        set val(runId), file('raw_alevin'), file(countsMtx), file(countsMtxNonempty) from COMPILED_RESULTS
+        set val(runId), file('raw_alevin'), file(rawBarcodeFreq), file(countsMtx), file(countsMtxNonempty), file(qcPlot) from COMPILED_RESULTS
 
     output:
         set val(runId), file("$runId") into RESULTS_FOR_COUNTING
@@ -349,6 +348,8 @@ process compile_results{
     """
         mkdir -p raw_alevin/alevin/mtx
         cp -P $countsMtx $countsMtxNonempty raw_alevin/alevin/mtx 
+        mkdir -p raw_alevin/alevin/qc
+        cp -P $qcPlot raw_alevin/alevin/qc
         cp -P raw_alevin $runId
     """
 }
