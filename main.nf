@@ -6,6 +6,11 @@ referenceFasta = params.referenceFasta
 referenceGtf = params.referenceGtf
 protocol = params.protocol
 
+manualDownloadFolder =''
+if ( params.containsKey('manualDownloadFolder')){
+    manualDownloadFolder = params.manualDownloadFolder
+}
+
 // Read ENA_RUN column from an SDRF
 
 Channel
@@ -46,12 +51,23 @@ process download_fastqs {
         set val(runId), file("${cdnaFastqFile}"), file("${barcodesFastqFile}"), val(barcodeLength), val(umiLength), val(end), val(cellCount) into DOWNLOADED_FASTQS
 
     """
-        confPart=''
-        if [ -e "$NXF_TEMP/atlas-fastq-provider/download_config.sh" ]; then
-            confPart=" -c $NXF_TEMP/atlas-fastq-provider/download_config.sh"
-        fi 
-        fetchFastq.sh -f ${cdnaFastqURI} -t ${cdnaFastqFile} -m ${params.downloadMethod} \$confPart
-        fetchFastq.sh -f ${barcodesFastqURI} -t ${barcodesFastqFile} -m ${params.downloadMethod} \$confPart
+        if [ -n "$manualDownloadFolder" ] && [ -e $manualDownloadFolder/${cdnaFastqFile} ] && [ -e $manualDownloadFolder/${barcodesFastqFile} ]; then
+           ln -s $manualDownloadFolder/${cdnaFastqFile} ${cdnaFastqFile}
+           ln -s $manualDownloadFolder/${barcodesFastqFile} ${barcodesFastqFile}
+        elif [ -n "$manualDownloadFolder" ] && [ -e $manualDownloadFolder/${cdnaFastqFile} ] && [ ! -e $manualDownloadFolder/${barcodesFastqFile} ]; then
+            echo 'cDNA file $cdnaFastqFile is available locally, but barcodes file $barcodesFastqFile is not 1>&2
+            exit 2    
+        elif [ -n "$manualDownloadFolder" ] && [ ! -e $manualDownloadFolder/${cdnaFastqFile} ] && [ -e $manualDownloadFolder/${barcodesFastqFile} ]; then
+            echo 'cDNA file $cdnaFastqFile is not available locally, but barcodes file $barcodesFastqFile is 1>&2
+            exit 3    
+        else
+            confPart=''
+            if [ -e "$NXF_TEMP/atlas-fastq-provider/download_config.sh" ]; then
+                confPart=" -c $NXF_TEMP/atlas-fastq-provider/download_config.sh"
+            fi 
+            fetchFastq.sh -f ${cdnaFastqURI} -t ${cdnaFastqFile} -m ${params.downloadMethod} \$confPart
+            fetchFastq.sh -f ${barcodesFastqURI} -t ${barcodesFastqFile} -m ${params.downloadMethod} \$confPart
+        fi
     """
 }
 
