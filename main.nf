@@ -24,51 +24,85 @@ Channel
         SDRF_FOR_COUNT
     }
 
-// Read URIs from SDRF, generate target file names, and barcode locations
-
-SDRF_FOR_FASTQS
-    .map{ row-> tuple(row["${params.fields.run}"], row["${params.fields.cdna_uri}"], row["${params.fields.cell_barcode_uri}"], file(row["${params.fields.cdna_uri}"]).getName(), file(row["${params.fields.cell_barcode_uri}"]).getName(), row["${params.fields.cell_barcode_size}"], row["${params.fields.umi_barcode_size}"], row["${params.fields.end}"], row["${params.fields.cell_count}"]) }
-    .set { FASTQ_RUNS }
-
 REFERENCE_FASTA = Channel.fromPath( referenceFasta, checkIfExists: true )
 REFERENCE_GTF = Channel.fromPath( referenceGtf, checkIfExists: true )
 
-// Call the download script to retrieve run fastqs
+// Read URIs from SDRF, generate target file names, and barcode locations
 
-process download_fastqs {
-    
-    conda "${baseDir}/envs/atlas-fastq-provider.yml"
-    
-    maxForks params.maxConcurrentDownloads
-    time { 1.hour * task.attempt }
+if ( params.containsKey('hca_uuid') ){
+    SDRF_FOR_FASTQS
+        .map{ row-> tuple(row["${params.fields.run}"], row["${params.fields.hca_uuid}"], row["${params.fields.hca_version}"], row["${params.fields.cdna_uri}"], row["${params.fields.cell_barcode_uri}"],  row["${params.fields.cell_barcode_size}"], row["${params.fields.umi_barcode_size}"], row["${params.fields.end}"], row["${params.fields.cell_count}"]) }
+        .set { FASTQ_RUNS }
+  
+    // Use the HCA DSS client to retrieve the fastqs
+ 
+    process hca_download_fastqs{
+        
+        conda "${baseDir}/envs/hca.yml"
+        
+        maxForks params.maxConcurrentDownloads
+        time { 1.hour * task.attempt }
 
-    errorStrategy { task.attempt<=10 ? 'retry' : 'finish' } 
-    
-    input:
-        set runId, cdnaFastqURI, barcodesFastqURI, cdnaFastqFile, barcodesFastqFile, val(barcodeLength), val(umiLength), val(end), val(cellCount) from FASTQ_RUNS
+        errorStrategy { task.attempt<=10 ? 'retry' : 'finish' } 
+        
+        input:
+            set runId, hcaUUID, hcaVersion, cdnaFastqFile, barcodesFastqFile, val(barcodeLength), val(umiLength), val(end), val(cellCount) from FASTQ_RUNS
 
-    output:
-        set val(runId), file("${cdnaFastqFile}"), file("${barcodesFastqFile}"), val(barcodeLength), val(umiLength), val(end), val(cellCount) into DOWNLOADED_FASTQS
+        output:
+            set val(runId), file("${cdnaFastqFile}"), file("${barcodesFastqFile}"), val(barcodeLength), val(umiLength), val(end), val(cellCount) into DOWNLOADED_FASTQS
 
-    """
-        if [ -n "$manualDownloadFolder" ] && [ -e $manualDownloadFolder/${cdnaFastqFile} ] && [ -e $manualDownloadFolder/${barcodesFastqFile} ]; then
-           ln -s $manualDownloadFolder/${cdnaFastqFile} ${cdnaFastqFile}
-           ln -s $manualDownloadFolder/${barcodesFastqFile} ${barcodesFastqFile}
-        elif [ -n "$manualDownloadFolder" ] && [ -e $manualDownloadFolder/${cdnaFastqFile} ] && [ ! -e $manualDownloadFolder/${barcodesFastqFile} ]; then
-            echo 'cDNA file $cdnaFastqFile is available locally, but barcodes file $barcodesFastqFile is not 1>&2
-            exit 2    
-        elif [ -n "$manualDownloadFolder" ] && [ ! -e $manualDownloadFolder/${cdnaFastqFile} ] && [ -e $manualDownloadFolder/${barcodesFastqFile} ]; then
-            echo 'cDNA file $cdnaFastqFile is not available locally, but barcodes file $barcodesFastqFile is 1>&2
-            exit 3    
-        else
-            confPart=''
-            if [ -e "$NXF_TEMP/atlas-fastq-provider/download_config.sh" ]; then
-                confPart=" -c $NXF_TEMP/atlas-fastq-provider/download_config.sh"
-            fi 
-            fetchFastq.sh -f ${cdnaFastqURI} -t ${cdnaFastqFile} -m ${params.downloadMethod} \$confPart
-            fetchFastq.sh -f ${barcodesFastqURI} -t ${barcodesFastqFile} -m ${params.downloadMethod} \$confPart
-        fi
-    """
+        """
+        hca dss download --bundle-uuid $hcaUUID --version $hcaVersion --download-dir . --replica aws --no-metadata --data-filter ${cdnaFastqFile}        
+        hca dss download --bundle-uuid $hcaUUID --version $hcaVersion --download-dir . --replica aws --no-metadata --data-filter ${barcodesFastqFile}        
+
+        """
+    }
+ 
+}else{
+
+    SDRF_FOR_FASTQS
+        .map{ row-> tuple(row["${params.fields.run}"], row["${params.fields.cdna_uri}"], row["${params.fields.cell_barcode_uri}"], file(row["${params.fields.cdna_uri}"]).getName(), file(row["${params.fields.cell_barcode_uri}"]).getName(), row["${params.fields.cell_barcode_size}"], row["${params.fields.umi_barcode_size}"], row["${params.fields.end}"], row["${params.fields.cell_count}"]) }
+        .set { FASTQ_RUNS }
+
+    // Call the download script to retrieve run fastqs
+
+    process download_fastqs {
+        
+        conda "${baseDir}/envs/atlas-fastq-provider.yml"
+        
+        maxForks params.maxConcurrentDownloads
+        time { 1.hour * task.attempt }
+
+        errorStrategy { task.attempt<=10 ? 'retry' : 'finish' } 
+        
+        input:
+            set runId, cdnaFastqURI, barcodesFastqURI, cdnaFastqFile, barcodesFastqFile, val(barcodeLength), val(umiLength), val(end), val(cellCount) from FASTQ_RUNS
+
+        output:
+            set val(runId), file("${cdnaFastqFile}"), file("${barcodesFastqFile}"), val(barcodeLength), val(umiLength), val(end), val(cellCount) into DOWNLOADED_FASTQS
+
+        """
+            if [ -n "$manualDownloadFolder" ] && [ -e $manualDownloadFolder/${cdnaFastqFile} ] && [ -e $manualDownloadFolder/${barcodesFastqFile} ]; then
+               ln -s $manualDownloadFolder/${cdnaFastqFile} ${cdnaFastqFile}
+               ln -s $manualDownloadFolder/${barcodesFastqFile} ${barcodesFastqFile}
+            elif [ -n "$manualDownloadFolder" ] && [ -e $manualDownloadFolder/${cdnaFastqFile} ] && [ ! -e $manualDownloadFolder/${barcodesFastqFile} ]; then
+                echo 'cDNA file $cdnaFastqFile is available locally, but barcodes file $barcodesFastqFile is not 1>&2
+                exit 2    
+            elif [ -n "$manualDownloadFolder" ] && [ ! -e $manualDownloadFolder/${cdnaFastqFile} ] && [ -e $manualDownloadFolder/${barcodesFastqFile} ]; then
+                echo 'cDNA file $cdnaFastqFile is not available locally, but barcodes file $barcodesFastqFile is 1>&2
+                exit 3    
+            else
+                confPart=''
+                if [ -e "$NXF_TEMP/atlas-fastq-provider/download_config.sh" ]; then
+                    confPart=" -c $NXF_TEMP/atlas-fastq-provider/download_config.sh"
+                fi 
+                fetchFastq.sh -f ${cdnaFastqURI} -t ${cdnaFastqFile} -m ${params.downloadMethod} \$confPart
+                fetchFastq.sh -f ${barcodesFastqURI} -t ${barcodesFastqFile} -m ${params.downloadMethod} \$confPart
+            fi
+        """
+    }
+
+
 }
 
 // Group read files by run name, or by technical replicate group if specified
