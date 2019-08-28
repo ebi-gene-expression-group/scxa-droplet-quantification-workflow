@@ -29,7 +29,7 @@ REFERENCE_GTF = Channel.fromPath( referenceGtf, checkIfExists: true )
 
 // Read URIs from SDRF, generate target file names, and barcode locations
 
-if ( params.containsKey('hca_uuid') ){
+if ( params.fields.containsKey('hca_uuid') ){
     SDRF_FOR_FASTQS
         .map{ row-> tuple(row["${params.fields.run}"], row["${params.fields.hca_uuid}"], row["${params.fields.hca_version}"], row["${params.fields.cdna_uri}"], row["${params.fields.cell_barcode_uri}"],  row["${params.fields.cell_barcode_size}"], row["${params.fields.umi_barcode_size}"], row["${params.fields.end}"], row["${params.fields.cell_count}"]) }
         .set { FASTQ_RUNS }
