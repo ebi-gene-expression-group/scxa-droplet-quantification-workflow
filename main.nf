@@ -24,14 +24,14 @@ Channel
         SDRF_FOR_COUNT
     }
 
+REFERENCE_FASTA = Channel.fromPath( referenceFasta, checkIfExists: true )
+REFERENCE_GTF = Channel.fromPath( referenceGtf, checkIfExists: true )
+
 // Read URIs from SDRF, generate target file names, and barcode locations
 
 SDRF_FOR_FASTQS
     .map{ row-> tuple(row["${params.fields.run}"], row["${params.fields.cdna_uri}"], row["${params.fields.cell_barcode_uri}"], file(row["${params.fields.cdna_uri}"]).getName(), file(row["${params.fields.cell_barcode_uri}"]).getName(), row["${params.fields.cell_barcode_size}"], row["${params.fields.umi_barcode_size}"], row["${params.fields.end}"], row["${params.fields.cell_count}"]) }
     .set { FASTQ_RUNS }
-
-REFERENCE_FASTA = Channel.fromPath( referenceFasta, checkIfExists: true )
-REFERENCE_GTF = Channel.fromPath( referenceGtf, checkIfExists: true )
 
 // Call the download script to retrieve run fastqs
 
