@@ -138,6 +138,12 @@ process synchronise_cdna_gtf {
     """
 }
 
+REFERENCE_FASTA_CLEANED
+    .into{
+        REFERENCE_FASTA_CLEANED_FOR_SALMON
+        REFERENCE_FASTA_CLEANED_FOR_KALLISTO
+    }
+
 // Generate an index from the transcriptome
 
 process salmon_index {
@@ -152,7 +158,7 @@ process salmon_index {
     maxRetries 10
 
     input:
-        file(referenceFasta) from REFERENCE_FASTA_CLEANED
+        file(referenceFasta) from REFERENCE_FASTA_CLEANED_FOR_SALMON
 
     output:
         file('salmon_index') into SALMON_INDEX
@@ -161,6 +167,35 @@ process salmon_index {
     salmon index -t ${referenceFasta} -i salmon_index -k ${params.salmon.index.kmerSize}
     """
 }
+
+process kallisto_index {
+    
+    conda "${baseDir}/envs/kallisto.yml"
+
+    cache 'deep'
+    
+    memory { 20.GB * task.attempt }
+
+    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 || task.attempt < 3  ? 'retry' : 'ignore' }
+    maxRetries 10
+
+    input:
+        file(referenceFasta) from REFERENCE_FASTA_CLEANED_FOR_KALLISTO
+
+    output:
+        file('kallisto_index') into KALLISTO_INDEX
+
+    """
+    kallisto index -i salmon_index -k ${params.salmon.index.kmerSize} ${referenceFasta}
+    """
+}
+
+FINAL_FASTQS
+    .into{
+        FASTQS_FOR_ALEVIN
+        FASTQS_FOR_KALLISTO
+    }
+
 
 // Run Alevin per row
 
@@ -230,6 +265,56 @@ process alevin {
     mv ${runId}_tmp ${runId}
     """
 }
+
+process kallisto_bus {
+    
+    conda "${baseDir}/envs/alevin.yml"
+    
+    cache 'deep'
+
+    memory { 20.GB * task.attempt }
+    cpus 12
+
+    errorStrategy { task.exitStatus !=2 && (task.exitStatus == 130 || task.exitStatus == 137 || task.attempt < 3)  ? 'retry' : 'ignore' }
+    maxRetries 10
+
+    input:
+        file(indexFile) from KALLISTO_INDEX
+        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end), val(cellCount) from FINAL_FASTQS
+        file(transcriptToGene) from TRANSCRIPT_TO_GENE
+
+    output:
+        set val(runId), file("${runId}"),  file("${runId}_pre/alevin/raw_cb_frequency.txt") into ALEVIN_RESULTS
+
+    script:
+        
+        def barcodeConfig = ''
+
+        if ( params.containsKey(protocol) ){
+
+            canonicalProtocol = params.get(protocol)
+            kallistoType = canonicalProtocol.kallistoType
+
+            // Non-standard barcode config is supplied as a custom method
+
+            if ( "${canonicalProtocol.barcodeLength}" != barcodeLength || "${canonicalProtocol.umiLength}" != umiLength || "${canonicalProtocol.end}" != end ){
+                barcodeConfig = "--barcodeLength ${barcodeLength} --umiLength ${umiLength} --end ${end}"
+                barcodeConfig =  
+
+            }else{
+                barcodeConfig = "-x $kallistoType"
+            }
+            
+        }
+
+        """
+        kallisto bus -i ${indexFile} -o ${runId}_tmp -x $barcodeConfig -t ${task.cpus} \$(paste -d ' ' <(ls barcodes*.fastq.gz) <(ls cdna*.fastq.gz) | tr '\n' ' ')
+        bustools correct -p ${runId}_tmp/output.bus | bustools sort -T $(pwd)/tmp/ -t ${task.cpus} -p - | \
+            bustools count -o genecount/genes -g $trasncriptToGene -e ${runId}_tmp/matrix.ec -t ${runId}_tmp/transcripts.txt --genecounts -
+
+        """ 
+}
+
 
 ALEVIN_RESULTS
     .into{

@@ -1,0 +1,5 @@
+name: kallisto
+dependencies:
+  - kallisto
+  - bustools
+  - bioconductor-dropletutils
