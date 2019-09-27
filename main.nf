@@ -213,7 +213,7 @@ process alevin {
 
     input:
         file(indexDir) from SALMON_INDEX
-        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end), val(cellCount) from FINAL_FASTQS
+        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end), val(cellCount) from FASTQS_FOR_ALEVIN
         file(transcriptToGene) from TRANSCRIPT_TO_GENE
 
     output:
@@ -280,11 +280,11 @@ process kallisto_bus {
 
     input:
         file(indexFile) from KALLISTO_INDEX
-        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end), val(cellCount) from FINAL_FASTQS
+        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end), val(cellCount) from FASTQS_FOR_KALLISTO
         file(transcriptToGene) from TRANSCRIPT_TO_GENE
 
     output:
-        set val(runId), file("${runId}"),  file("${runId}_pre/alevin/raw_cb_frequency.txt") into ALEVIN_RESULTS
+        set val(runId), file("${runId}"),  file("${runId}_pre/alevin/raw_cb_frequency.txt") into KALLISTO_RESULTS
 
     script:
         
