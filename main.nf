@@ -310,7 +310,7 @@ process kallisto_bus {
         """
         kallisto bus -i ${indexFile} -o ${runId}_tmp -x $barcodeConfig -t ${task.cpus} \$(paste -d ' ' <(ls barcodes*.fastq.gz) <(ls cdna*.fastq.gz) | tr '\n' ' ')
         bustools correct -p ${runId}_tmp/output.bus | bustools sort -T \$(pwd)/tmp/ -t ${task.cpus} -p - | \
-            bustools count -o genecount/genes -g $trasncriptToGene -e ${runId}_tmp/matrix.ec -t ${runId}_tmp/transcripts.txt --genecounts -
+            bustools count -o genecount/genes -g $transcriptToGene -e ${runId}_tmp/matrix.ec -t ${runId}_tmp/transcripts.txt --genecounts -
 
         """ 
 }
