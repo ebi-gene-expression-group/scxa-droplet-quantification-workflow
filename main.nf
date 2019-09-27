@@ -183,10 +183,10 @@ process kallisto_index {
         file(referenceFasta) from REFERENCE_FASTA_CLEANED_FOR_KALLISTO
 
     output:
-        file('kallisto_index') into KALLISTO_INDEX
+        file('kallisto_index.idx') into KALLISTO_INDEX
 
     """
-    kallisto index -i salmon_index -k ${params.salmon.index.kmerSize} ${referenceFasta}
+    kallisto index -i kallisto_index.idx -k ${params.salmon.index.kmerSize} ${referenceFasta}
     """
 }
 
