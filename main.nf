@@ -294,12 +294,12 @@ process kallisto_bus {
 
             canonicalProtocol = params.get(protocol)
             kallistoType = canonicalProtocol.kallistoType
+            umiEnd = barcodeLength + umiLength
 
             // Non-standard barcode config is supplied as a custom method
 
             if ( "${canonicalProtocol.barcodeLength}" != barcodeLength || "${canonicalProtocol.umiLength}" != umiLength || "${canonicalProtocol.end}" != end ){
-                barcodeConfig = "--barcodeLength ${barcodeLength} --umiLength ${umiLength} --end ${end}"
-                barcodeConfig =  
+                barcodeConfig = "0,0,$barcodeLength:0,$barcodeLength,$umiLength:1,0,0" 
 
             }else{
                 barcodeConfig = "-x $kallistoType"
