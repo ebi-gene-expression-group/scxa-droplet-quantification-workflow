@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-# Read the results of Alevin and write outputs to a .mtx file readable by tools
-# expecting 10X outputs. Adapted from
-# https://github.com/k3yavi/vpolo/blob/master/vpolo/alevin/parser.py 
+# Alevin and Kallisto currently output MTX files and gene labels in a manner
+# inconsistent with the old-style 10X conventions. In both cases the matrix
+# must be transposed, and gene indentifier columns duplicated
 
 from __future__ import print_function
 from collections import defaultdict
@@ -18,41 +18,28 @@ import pathlib
 import numpy as np
 import argparse
 
-parser = argparse.ArgumentParser(description='Convert Alevin outputs to 10X .mtx.')
-parser.add_argument('alevin_out', help = 'Alevin output directory')
+parser = argparse.ArgumentParser(description='Convert Alevin or Kallisto MTX outputs to 10X .mtx.')
+parser.add_argument('mtx', help = 'MTX-format matrix file')
+parser.add_argument('genes', help = 'Gene names text file')
+parser.add_argument('barcodes', help = 'Barcodes file')
 parser.add_argument('mtx_out', help = 'Output directory for converted results')
 parser.add_argument('--cell_prefix', dest='cell_prefix', default='', help = 'Prefix to apply to cell barcodes')
 args = parser.parse_args() 
 
-alevin_out=args.alevin_out
-mtx_out=args.mtx_out
-cell_prefix=args.cell_prefix
+quant_file=args.mtx
+cb_file=args.barcodes
+gene_file=args.genes
 
-# Run some checks in the Alevin output
-
-if not os.path.isdir(alevin_out):
-    print("{} is not a directory".format( alevin_out ))
-    sys.exit(1)
-
-alevin_out = os.path.join(alevin_out, "alevin")
-
-if not os.path.exists(alevin_out):
-    print("{} directory doesn't exist".format( alevin_out ))
-    sys.exit(1)
-
-quant_file = os.path.join(alevin_out, "quants_mat.mtx.gz")
 if not os.path.exists(quant_file):
     print("quant file {} doesn't exist".format( quant_file ))
     sys.exit(1)
 
-cb_file = os.path.join(alevin_out, "quants_mat_rows.txt")
 if not os.path.exists(cb_file):
-    print("quant file's index: {} doesn't exist".format( cb_file ))
+    print("cell barcodes file: {} doesn't exist".format( cb_file ))
     sys.exit(1)
 
-gene_file = os.path.join(alevin_out, "quants_mat_cols.txt")
 if not os.path.exists(gene_file):
-    print("quant file's header: {} doesn't exist".format( gene_file))
+    print("genes file: {} doesn't exist".format( gene_file))
     sys.exit(1)
 
 # Read gene and cell labels, apply cell prefix

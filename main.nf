@@ -217,7 +217,7 @@ process alevin {
         file(transcriptToGene) from TRANSCRIPT_TO_GENE
 
     output:
-        set val(runId), file("${runId}"),  file("${runId}_pre/alevin/raw_cb_frequency.txt") into ALEVIN_RESULTS
+        set val('alevin'), val(runId), file("${runId}"),  file("${runId}_pre/alevin/raw_cb_frequency.txt"), file("${runId}/alevin/quants_mat.gz"), file("${runId}/alevin/quants_mat_cols.txt"), file("${runId}/alevin/quants_mat_rows.txt") into ALEVIN_RESULTS
 
     script:
 
@@ -284,7 +284,7 @@ process kallisto_bus {
         file(transcriptToGene) from TRANSCRIPT_TO_GENE
 
     output:
-        set val(runId), file("${runId}"),  file("${runId}_pre/alevin/raw_cb_frequency.txt") into KALLISTO_RESULTS
+        set val(runId), file("${runId}") into KALLISTO_RESULTS
 
     script:
         
@@ -299,7 +299,7 @@ process kallisto_bus {
             // Non-standard barcode config is supplied as a custom method
 
             if ( "${canonicalProtocol.barcodeLength}" != barcodeLength || "${canonicalProtocol.umiLength}" != umiLength || "${canonicalProtocol.end}" != end ){
-                barcodeConfig = "0,0,$barcodeLength:0,$barcodeLength,$umiLength:1,0,0" 
+                barcodeConfig = "-x 0,0,$barcodeLength:0,$barcodeLength,$umiLength:1,0,0" 
 
             }else{
                 barcodeConfig = "-x $kallistoType"
@@ -308,25 +308,48 @@ process kallisto_bus {
         }
 
         """
-        kallisto bus -i ${indexFile} -o ${runId}_tmp -x $barcodeConfig -t ${task.cpus} \$(paste -d ' ' <(ls barcodes*.fastq.gz) <(ls cdna*.fastq.gz) | tr '\n' ' ')
-        bustools correct -p ${runId}_tmp/output.bus | bustools sort -T \$(pwd)/tmp/ -t ${task.cpus} -p - | \
-            bustools count -o genecount/genes -g $transcriptToGene -e ${runId}_tmp/matrix.ec -t ${runId}_tmp/transcripts.txt --genecounts -
+        mkdir -p ${runId}/tmp
+
+        kallisto bus -i ${indexFile} -o ${runId}_tmp $barcodeConfig -t ${task.cpus} \$(paste -d ' ' <(ls barcodes*.fastq.gz) <(ls cdna*.fastq.gz) | tr '\\n' ' ')
+        bustools sort -T \$(pwd)/tmp/ -t ${task.cpus} -p ${runId}_tmp/output.bus | \
+            bustools count -o ${runId}_tmp/counts_mtx/gene -g $transcriptToGene -e ${runId}_tmp/matrix.ec -t ${runId}_tmp/transcripts.txt --genecounts -
+        gzip ${runId}_tmp/counts_mtx/gene.mtx        
+
+        mv ${runId}_tmp ${runId}
 
         """ 
 }
 
+# Just a utility process to make a raw cb frequency list for comparision with Alevin's
+
+process add_raw_counts_to_kallisto {
+
+    input:
+        set val(runId), file("${runId}") from KALLISTO_RESULTS
+
+    output:
+        set val('kallisto'), val(runId), file("${runId}"), file('raw_cb_frequency.txt'), file("${runId}/counts_mtx/gene.mtx.gz"), file("${runId}/counts_mtx/gene.genes.txt") file("${runId}/counts_mtx/gene.barcodes.txt") into KALLISTO_RESULTS_WITH_FREQS
+    
+
+    """
+    bustools text ${runId}/output.bus -p |  awk '{print $1}' | sort | uniq -c | sort -nr | awk '{print $2"\t"$1}' > raw_cb_frequency.txt
+    """
+
+}
 
 ALEVIN_RESULTS
+    .concat( KALLISTO_RESULTS)
     .into{
-        ALEVIN_RESULTS_FOR_QC
-        ALEVIN_RESULTS_FOR_PROCESSING
-        ALEVIN_RESULTS_FOR_OUTPUT
+        RESULTS_FOR_QC
+        RESULTS_FOR_PROCESSING
+        RESULTS_FOR_OUTPUT
     }
+
 
 // Convert Alevin output to MTX. There will be one of these for every run, or
 // technical replicate group of runs
 
-process alevin_to_mtx {
+process convert_to_mtx {
 
     conda "${baseDir}/envs/parse_alevin.yml"
     
@@ -335,29 +358,29 @@ process alevin_to_mtx {
     maxRetries 20
 
     input:
-        set val(runId), file(alevinResult), file(rawBarcodeFreq) from ALEVIN_RESULTS_FOR_PROCESSING
+        set val(method), val(runId), file(resultDir), file(rawBarcodeFreq), file(mtxFile), file(genesFile), file(barcodesFile) from RESULTS_FOR_PROCESSING
 
     output:
-        set val(runId), file("counts_mtx") into ALEVIN_MTX
+        set val(method), val(runId), file("counts_mtx") into RAW_MTX
 
     """
-    alevinMtxTo10x.py --cell_prefix ${runId}- $alevinResult counts_mtx
+    mtxTo10x.py --cell_prefix ${runId}- $mtxFile $genesFile $barcodesFile  counts_mtx
     """ 
 }
 
-ALEVIN_MTX
+RAW_MTX
     .into{
-        ALEVIN_MTX_FOR_QC
-        ALEVIN_MTX_FOR_EMPTYDROPS
-        ALEVIN_MTX_FOR_OUTPUT
+        RAW_MTX_FOR_QC
+        RAW_MTX_FOR_EMPTYDROPS
+        RAW_MTX_FOR_OUTPUT
     }
 
 // Make a diagnostic plot
 
-ALEVIN_RESULTS_FOR_QC
-    .join(ALEVIN_MTX_FOR_QC)
+RESULTS_FOR_QC
+    .join(MTX_FOR_QC, by: [0,1])
     .set{
-        ALEVIN_QC_INPUTS
+        QC_INPUTS
     }
 
 process droplet_qc_plot{
@@ -369,13 +392,13 @@ process droplet_qc_plot{
     maxRetries 20
 
     input:
-        set val(runId), file(alevinResult), file(rawBarcodeFreq), file(mtx) from ALEVIN_QC_INPUTS
+        set val(method), val(runId), file(alevinResult), file(rawBarcodeFreq), file(mtx) from QC_INPUTS
 
     output:
-        set val(runId), file("${runId}.png") into ALEVIN_QC_PLOTS
+        set val(method), val(runId), file("${method}-${runId}.png") into QC_PLOTS
 
     """
-    dropletBarcodePlot.R $rawBarcodeFreq $mtx $runId ${runId}.png
+    dropletBarcodePlot.R $rawBarcodeFreq $mtx $runId ${method}-${runId}.png
     """ 
 }
 
@@ -390,10 +413,10 @@ process remove_empty_drops {
     maxRetries 20
    
     input:
-        set val(runId), file(countsMtx) from ALEVIN_MTX_FOR_EMPTYDROPS
+        set val(method), val(runId), file(countsMtx) from RAW_MTX_FOR_EMPTYDROPS
 
     output:
-        set val(runId), file('nonempty.rds') into NONEMPTY_RDS
+        set val(method), val(runId), file('nonempty.rds') into NONEMPTY_RDS
 
     """
         dropletutils-read-10x-counts.R -s counts_mtx -c TRUE -o matrix.rds
@@ -413,10 +436,10 @@ process rds_to_mtx{
     maxRetries 20
    
     input:
-        set val(runId), file(rds) from NONEMPTY_RDS
+        set val(method), val(runId), file(rds) from NONEMPTY_RDS
 
     output:
-        set val(runId), file("counts_mtx_nonempty") into NONEMPTY_MTX
+        set val(method), val(runId), file("counts_mtx_nonempty") into NONEMPTY_MTX
 
     """ 
         #!/usr/bin/env Rscript
@@ -430,10 +453,10 @@ process rds_to_mtx{
 
 // Compile raw results with raw and emptyDrops-filtered MTX
 
-ALEVIN_RESULTS_FOR_OUTPUT
-    .join(ALEVIN_MTX_FOR_OUTPUT)
-    .join(NONEMPTY_MTX)
-    .join(ALEVIN_QC_PLOTS)
+RESULTS_FOR_OUTPUT
+    .join(MTX_FOR_OUTPUT, by: [0,1])
+    .join(NONEMPTY_MTX, by: [0,1])
+    .join(QC_PLOTS, by: [0,1])
     .set{ COMPILED_RESULTS }
 
 process compile_results{
@@ -441,17 +464,17 @@ process compile_results{
     publishDir "$resultsRoot/alevin", mode: 'copy', overwrite: true
     
     input:
-        set val(runId), file('raw_alevin'), file(rawBarcodeFreq), file(countsMtx), file(countsMtxNonempty), file(qcPlot) from COMPILED_RESULTS
+        set val(method), val(runId), file('raw_alevin'), file(rawBarcodeFreq), file(countsMtx), file(countsMtxNonempty), file(qcPlot) from COMPILED_RESULTS
 
     output:
-        set val(runId), file("$runId") into RESULTS_FOR_COUNTING
+        set val(method), val(runId), file("$runId") into RESULTS_FOR_COUNTING
 
     """
-        mkdir -p raw_alevin/alevin/mtx
-        cp -P $countsMtx $countsMtxNonempty raw_alevin/alevin/mtx 
-        mkdir -p raw_alevin/alevin/qc
-        cp -P $qcPlot raw_alevin/alevin/qc
-        cp -P raw_alevin $runId
+        mkdir -p raw_$method/$method/mtx
+        cp -P $countsMtx $countsMtxNonempty raw_$method/$method/mtx 
+        mkdir -p raw_$method/$method/qc
+        cp -P $qcPlot raw_$method/$method/qc
+        cp -P raw_$method $runId
     """
 }
 
@@ -459,25 +482,27 @@ process compile_results{
 
 RESULTS_FOR_COUNTING
     .count()
-    .set{ ALEVIN_RESULTS_COUNT } 
+    .set{ RESULTS_COUNT } 
 
 process validate_results {
     
     executor 'local'
     
     input:
-        val(kallistoResultCount) from ALEVIN_RESULTS_COUNT 
+        val(resultCount) from RESULTS_COUNT 
         val(targetCount) from TARGET_RESULT_COUNT
 
     output:
         stdout DONE
 
     """
-    if [ "$kallistoResultCount" -ne "$targetCount" ]; then
-        echo "Alevin results count of $kallistoResultCount does not match expected results number ($targetCount)" 1>&2
+    expectedCount=\$(( 2*$targetCount )) 
+
+    if [ "\$expectedCount" -ne "$targetCount" ]; then
+        echo "Alevin and Kallisto results count of $resultCount does not match expected results number (\$expectedCount)" 1>&2
         exit 1
     else
-        echo "Alevin results count of $kallistoResultCount matches expected results number ($targetCount)"
+        echo "Alevin and Kallisto results count of $resultCount matches expected results number (\$expectedCount)"
     fi
     """
 }   
