@@ -332,7 +332,7 @@ process add_raw_counts_to_kallisto {
     
 
     """
-    bustools text ${runId}/output.bus -p |  awk '{print $1}' | sort | uniq -c | sort -nr | awk '{print $2"\t"$1}' > raw_cb_frequency.txt
+    bustools text ${runId}/output.bus -p |  awk '{print \$1}' | sort | uniq -c | sort -nr | awk '{print \$2"\t"\$1}' > raw_cb_frequency.txt
     """
 
 }
