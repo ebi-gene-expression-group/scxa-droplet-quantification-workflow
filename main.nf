@@ -311,6 +311,7 @@ process kallisto_bus {
         mkdir -p ${runId}/tmp
 
         kallisto bus -i ${indexFile} -o ${runId}_tmp $barcodeConfig -t ${task.cpus} \$(paste -d ' ' <(ls barcodes*.fastq.gz) <(ls cdna*.fastq.gz) | tr '\\n' ' ')
+        mkdir -p ${runId}_tmp/counts_mtx
         bustools sort -T \$(pwd)/tmp/ -t ${task.cpus} -p ${runId}_tmp/output.bus | \
             bustools count -o ${runId}_tmp/counts_mtx/gene -g $transcriptToGene -e ${runId}_tmp/matrix.ec -t ${runId}_tmp/transcripts.txt --genecounts -
         gzip ${runId}_tmp/counts_mtx/gene.mtx        
