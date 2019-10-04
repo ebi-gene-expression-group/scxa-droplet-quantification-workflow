@@ -378,7 +378,7 @@ RAW_MTX
 // Make a diagnostic plot
 
 RESULTS_FOR_QC
-    .join(MTX_FOR_QC, by: [0,1])
+    .join(RAW_MTX_FOR_QC, by: [0,1])
     .set{
         QC_INPUTS
     }
@@ -454,7 +454,7 @@ process rds_to_mtx{
 // Compile raw results with raw and emptyDrops-filtered MTX
 
 RESULTS_FOR_OUTPUT
-    .join(MTX_FOR_OUTPUT, by: [0,1])
+    .join(RAW_MTX_FOR_OUTPUT, by: [0,1])
     .join(NONEMPTY_MTX, by: [0,1])
     .join(QC_PLOTS, by: [0,1])
     .set{ COMPILED_RESULTS }
