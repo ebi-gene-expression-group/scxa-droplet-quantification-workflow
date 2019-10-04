@@ -328,7 +328,7 @@ process add_raw_counts_to_kallisto {
         set val(runId), file(kallistoDir) from KALLISTO_RESULTS
 
     output:
-        set val('kallisto'), val(runId), file(kallistoDir), file('raw_cb_frequency.txt'), file("${runId}/counts_mtx/gene.mtx.gz"), file("${runId}/counts_mtx/gene.genes.txt") file("${runId}/counts_mtx/gene.barcodes.txt") into KALLISTO_RESULTS_WITH_FREQS
+        set val('kallisto'), val(runId), file(kallistoDir), file('raw_cb_frequency.txt'), file("${runId}/counts_mtx/gene.mtx.gz"), file("${runId}/counts_mtx/gene.genes.txt"), file("${runId}/counts_mtx/gene.barcodes.txt") into KALLISTO_RESULTS_WITH_FREQS
     
 
     """
