@@ -324,6 +324,8 @@ process kallisto_bus {
 // Just a utility process to make a raw cb frequency list for comparision with Alevin's
 
 process add_raw_counts_to_kallisto {
+    
+    conda "${baseDir}/envs/kallisto.yml"
 
     input:
         set val(runId), file(kallistoDir) from KALLISTO_RESULTS
