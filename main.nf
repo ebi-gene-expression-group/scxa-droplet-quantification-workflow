@@ -325,10 +325,10 @@ process kallisto_bus {
 process add_raw_counts_to_kallisto {
 
     input:
-        set val(runId), file("${runId}") from KALLISTO_RESULTS
+        set val(runId), file(kallistoDir) from KALLISTO_RESULTS
 
     output:
-        set val('kallisto'), val(runId), file("${runId}"), file('raw_cb_frequency.txt'), file("${runId}/counts_mtx/gene.mtx.gz"), file("${runId}/counts_mtx/gene.genes.txt") file("${runId}/counts_mtx/gene.barcodes.txt") into KALLISTO_RESULTS_WITH_FREQS
+        set val('kallisto'), val(runId), file(kallistoDir), file('raw_cb_frequency.txt'), file("${runId}/counts_mtx/gene.mtx.gz"), file("${runId}/counts_mtx/gene.genes.txt") file("${runId}/counts_mtx/gene.barcodes.txt") into KALLISTO_RESULTS_WITH_FREQS
     
 
     """
@@ -338,7 +338,7 @@ process add_raw_counts_to_kallisto {
 }
 
 ALEVIN_RESULTS
-    .concat( KALLISTO_RESULTS)
+    .concat( KALLISTO_RESULTS_WITH_FREQS)
     .into{
         RESULTS_FOR_QC
         RESULTS_FOR_PROCESSING
