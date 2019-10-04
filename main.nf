@@ -268,7 +268,7 @@ process alevin {
 
 process kallisto_bus {
     
-    conda "${baseDir}/envs/alevin.yml"
+    conda "${baseDir}/envs/kallisto.yml"
     
     cache 'deep'
 
