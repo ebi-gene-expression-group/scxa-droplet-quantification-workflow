@@ -217,7 +217,7 @@ process alevin {
         file(transcriptToGene) from TRANSCRIPT_TO_GENE
 
     output:
-        set val('alevin'), val(runId), file("${runId}"),  file("${runId}_pre/alevin/raw_cb_frequency.txt"), file("${runId}/alevin/quants_mat.gz"), file("${runId}/alevin/quants_mat_cols.txt"), file("${runId}/alevin/quants_mat_rows.txt") into ALEVIN_RESULTS
+        set val('alevin'), val(runId), file("${runId}"),  file("${runId}_pre/alevin/raw_cb_frequency.txt"), file("${runId}/alevin/quants_mat.mtx.gz"), file("${runId}/alevin/quants_mat_cols.txt"), file("${runId}/alevin/quants_mat_rows.txt") into ALEVIN_RESULTS
 
     script:
 

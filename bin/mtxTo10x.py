@@ -29,6 +29,7 @@ args = parser.parse_args()
 quant_file=args.mtx
 cb_file=args.barcodes
 gene_file=args.genes
+cell_prefix=args.cell_prefix
 
 if not os.path.exists(quant_file):
     print("quant file {} doesn't exist".format( quant_file ))
