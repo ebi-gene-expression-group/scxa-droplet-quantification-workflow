@@ -457,17 +457,17 @@ process compile_results{
     publishDir "$resultsRoot/alevin", mode: 'copy', overwrite: true
     
     input:
-        set val(method), val(runId), file(result), file(rawBarcodeFreq), file(countsMtx), file(countsMtxNonempty), file(qcPlot) from COMPILED_RESULTS
+        set val(method), val('raw_results'), file(result), file(rawBarcodeFreq), file(countsMtx), file(countsMtxNonempty), file(qcPlot) from COMPILED_RESULTS
 
     output:
         set val(method), val(runId), file("$runId") into RESULTS_FOR_COUNTING
 
     """
-        mkdir -p raw_$method/$method/mtx
-        cp -P $countsMtx $countsMtxNonempty raw_$method/$method/mtx 
-        mkdir -p raw_$method/$method/qc
-        cp -P $qcPlot raw_$method/$method/qc
-        cp -P raw_$method $runId
+        mkdir -p raw_results/$method/mtx
+        cp -P $countsMtx $countsMtxNonempty raw_results/$method/mtx 
+        mkdir -p raw_results/$method/qc
+        cp -P $qcPlot raw_results/$method/qc
+        cp -P raw_results $runId
     """
 }
 
