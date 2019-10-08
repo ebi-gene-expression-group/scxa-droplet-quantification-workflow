@@ -342,12 +342,9 @@ process add_raw_counts_to_kallisto {
 
 ALEVIN_RESULTS
     .concat( KALLISTO_RESULTS_WITH_FREQS)
-    .into{
-        RESULTS_FOR_QC
-        RESULTS_FOR_PROCESSING
-        RESULTS_FOR_OUTPUT
+    .set{
+        ALL_RESULTS
     }
-
 
 // Convert Alevin output to MTX. There will be one of these for every run, or
 // technical replicate group of runs
@@ -361,30 +358,24 @@ process convert_to_mtx {
     maxRetries 20
 
     input:
-        set val(method), val(runId), file(resultDir), file(rawBarcodeFreq), file(mtxFile), file(genesFile), file(barcodesFile) from RESULTS_FOR_PROCESSING
+        set val(method), val(runId), file(resultDir), file(rawBarcodeFreq), file(mtxFile), file(genesFile), file(barcodesFile) from ALL_RESULTS
 
     output:
-        set val(method), val(runId), file("counts_mtx") into RAW_MTX
+        set val(method), val(runId), file(resultDir), file(rawBarcodeFreq), file("counts_mtx") into ALL_RESULTS_FIXED_MTX
 
     """
     mtxTo10x.py --cell_prefix ${runId}- $mtxFile $genesFile $barcodesFile  counts_mtx
     """ 
 }
 
-RAW_MTX
+ALL_RESULTS_FIXED_MTX
     .into{
-        RAW_MTX_FOR_QC
-        RAW_MTX_FOR_EMPTYDROPS
-        RAW_MTX_FOR_OUTPUT
+        RESULTS_FOR_QC
+        RESULTS_FOR_EMPTYDROPS
+        RESULTS_FOR_OUTPUT
     }
 
 // Make a diagnostic plot
-
-RESULTS_FOR_QC
-    .join(RAW_MTX_FOR_QC, by: [0,1])
-    .set{
-        QC_INPUTS
-    }
 
 process droplet_qc_plot{
     
@@ -395,7 +386,7 @@ process droplet_qc_plot{
     maxRetries 20
 
     input:
-        set val(method), val(runId), file(alevinResult), file(rawBarcodeFreq), file(mtx) from QC_INPUTS
+        set val(method), val(runId), file(result), file(rawBarcodeFreq), file(mtx) from RESULTS_FOR_QC
 
     output:
         set val(method), val(runId), file("${method}-${runId}.png") into QC_PLOTS
@@ -416,13 +407,13 @@ process remove_empty_drops {
     maxRetries 20
    
     input:
-        set val(method), val(runId), file(countsMtx) from RAW_MTX_FOR_EMPTYDROPS
+        set val(method), val(runId), file(result), file(rawBarcodeFreq), file(countsMtx) from RESULTS_FOR_EMPTYDROPS
 
     output:
         set val(method), val(runId), file('nonempty.rds') into NONEMPTY_RDS
 
     """
-        dropletutils-read-10x-counts.R -s counts_mtx -c TRUE -o matrix.rds
+        dropletutils-read-10x-counts.R -s $countsMtx -c TRUE -o matrix.rds
         dropletutils-empty-drops.R -i matrix.rds --lower ${params.emptyDrops.lower} --niters ${params.emptyDrops.nIters} --filter-empty ${params.emptyDrops.filterEmpty} \
             --filter-fdr ${params.emptyDrops.filterFdr} --ignore ${params.minCbFreq} -o nonempty.rds -t nonempty.txt
     """
@@ -467,7 +458,7 @@ process compile_results{
     publishDir "$resultsRoot/alevin", mode: 'copy', overwrite: true
     
     input:
-        set val(method), val(runId), file('raw_alevin'), file(rawBarcodeFreq), file(countsMtx), file(countsMtxNonempty), file(qcPlot) from COMPILED_RESULTS
+        set val(method), val(runId), file(result), file(rawBarcodeFreq), file(countsMtx), file(countsMtxNonempty), file(qcPlot) from COMPILED_RESULTS
 
     output:
         set val(method), val(runId), file("$runId") into RESULTS_FOR_COUNTING
