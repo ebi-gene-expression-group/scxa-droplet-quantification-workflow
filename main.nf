@@ -448,7 +448,6 @@ process rds_to_mtx{
 // Compile raw results with raw and emptyDrops-filtered MTX
 
 RESULTS_FOR_OUTPUT
-    .join(RAW_MTX_FOR_OUTPUT, by: [0,1])
     .join(NONEMPTY_MTX, by: [0,1])
     .join(QC_PLOTS, by: [0,1])
     .set{ COMPILED_RESULTS }
