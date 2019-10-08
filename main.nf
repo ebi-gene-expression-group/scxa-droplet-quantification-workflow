@@ -491,7 +491,7 @@ process validate_results {
     """
     expectedCount=\$(( 2*$targetCount )) 
 
-    if [ "\$expectedCount" -ne "$targetCount" ]; then
+    if [ "\$expectedCount" -ne "$resultCount" ]; then
         echo "Alevin and Kallisto results count of $resultCount does not match expected results number (\$expectedCount)" 1>&2
         exit 1
     else
