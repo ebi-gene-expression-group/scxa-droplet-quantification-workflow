@@ -457,7 +457,7 @@ process compile_results{
     publishDir "$resultsRoot/alevin", mode: 'copy', overwrite: true
     
     input:
-        set val(method), val(runId), val('raw_results'), file(result), file(rawBarcodeFreq), file(countsMtx), file(countsMtxNonempty), file(qcPlot) from COMPILED_RESULTS
+        set val(method), val(runId), val('raw_results'), file(rawBarcodeFreq), file(countsMtx), file(countsMtxNonempty), file(qcPlot) from COMPILED_RESULTS
 
     output:
         set val(method), val(runId), file("$runId") into RESULTS_FOR_COUNTING
