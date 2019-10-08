@@ -308,7 +308,7 @@ process kallisto_bus {
         }
 
         """
-        mkdir -p ${runId}_tmp
+        mkdir -p ${runId}_tmp \$(pwd)/tmp
 
         kallisto bus -i ${indexFile} -o ${runId}_tmp $barcodeConfig -t ${task.cpus} \$(paste -d ' ' <(ls barcodes*.fastq.gz) <(ls cdna*.fastq.gz) | tr '\\n' ' ')
         mkdir -p ${runId}_tmp/counts_mtx
