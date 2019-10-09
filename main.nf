@@ -217,7 +217,7 @@ process alevin {
         file(transcriptToGene) from TRANSCRIPT_TO_GENE
 
     output:
-        set val('alevin'), val(runId), file("${runId}"),  file("${runId}_pre/alevin/raw_cb_frequency.txt"), file("${runId}/alevin/quants_mat.mtx.gz"), file("${runId}/alevin/quants_mat_cols.txt"), file("${runId}/alevin/quants_mat_rows.txt") into ALEVIN_RESULTS
+        set val('alevin'), val(runId), file("${runId}"),  file("${runId}/alevin/raw_cb_frequency.txt"), file("${runId}/alevin/quants_mat.mtx.gz"), file("${runId}/alevin/quants_mat_cols.txt"), file("${runId}/alevin/quants_mat_rows.txt") into ALEVIN_RESULTS
 
     script:
 
@@ -248,7 +248,7 @@ process alevin {
     # Supply the whitelist to the main Alevin run
 
     salmon alevin -l ${params.salmon.libType} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-        ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_tmp --tgMap ${transcriptToGene} --dumpMtx
+        ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_tmp --tgMap ${transcriptToGene} --dumpMtx --dumpFeatures
  
     mv ${runId}_tmp ${runId}
     """
