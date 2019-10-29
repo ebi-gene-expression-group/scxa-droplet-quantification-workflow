@@ -455,6 +455,7 @@ process compile_results{
         cp -P $countsMtx $countsMtxNonempty raw_results/$method/mtx 
         mkdir -p raw_results/$method/qc
         cp -P $qcPlot raw_results/$method/qc
+        cp -P $rawBarcodeFreq raw_results/$method
         cp -P raw_results $runId
     """
 }
