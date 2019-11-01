@@ -1,4 +1,5 @@
 name: cdna_gtf
 dependencies:
+  - r-optparse
   - bioconductor-rtracklayer
   - bioconductor-biostrings 

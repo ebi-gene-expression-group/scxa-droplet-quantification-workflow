@@ -134,7 +134,9 @@ process synchronise_cdna_gtf {
         file('cleanedCdna.fa.gz') into REFERENCE_FASTA_CLEANED
 
     """
-    setupCdnaTranscriptToGene.R ${referenceFasta} ${referenceGtf} transcript_to_gene.txt cleanedCdna.fa.gz 
+    gtf2featureAnnotation.R --gtf-file ${referenceGtf} --no-header --version-transcripts --filter-cdnas ${referenceFasta} \
+        --filter-cdnas-field "transcript_id" --filter-cdnas-output cleanedCdna.fa.gz --feature-type "transcript" \
+        --first-field "transcript_id" --output-file transcript_to_gene.txt --fields "transcript_id,gene_id"    
     """
 }
 
