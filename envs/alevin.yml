@@ -1,6 +1,6 @@
 name: salmon
 dependencies:
-  - salmon=0.14.2=hf69c8f4_1
+  - salmon=1.0.0
   - bioconductor-dropletutils
   - r-gridextra
   - r-ggplot2
