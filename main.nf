@@ -176,33 +176,6 @@ process alevin_config {
             exit 1
         fi
 
-        echo -n "$barcodeConfig"
-        """
-}
-
-// Run Alevin per row
-
-process alevin {
-
-    conda "${baseDir}/envs/alevin.yml"
-    
-    cache 'deep'
-
-    memory { 20.GB * task.attempt }
-    cpus 12
-
-    errorStrategy { task.exitStatus !=2 && (task.exitStatus == 130 || task.exitStatus == 137 || task.attempt < 3)  ? 'retry' : 'ignore' }
-    maxRetries 10
-
-    input:
-        file(indexDir) from SALMON_INDEX
-        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end), val(cellCount), val(barcodeConfig) from FINAL_FASTQS_FOR_ALEVIN.join(ALEVIN_CONFIG)
-        file(transcriptToGene) from TRANSCRIPT_TO_GENE
-
-    output:
-        set val(runId), file("${runId}"),  file("${runId}/alevin/raw_cb_frequency.txt") into ALEVIN_RESULTS
-
-    """
     salmon alevin -l ${params.salmon.libType} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
         ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_tmp --tgMap ${transcriptToGene} --dumpFeatures --keepCBFraction 1 \
         --freqThreshold ${params.minCbFreq} --dumpMtx
