@@ -24,8 +24,8 @@ Channel
         SDRF_FOR_COUNT
     }
 
-REFERENCE_FASTA = Channel.fromPath( referenceFasta, checkIfExists: true ).first()
-TRANSCRIPT_TO_GENE = Channel.fromPath( transcriptToGene, checkIfExists: true ).first()
+REFERENCE_FASTA = Channel.fromPath( referenceFasta, checkIfExists: true )
+TRANSCRIPT_TO_GENE = Channel.fromPath( transcriptToGene, checkIfExists: true )
 
 // Read URIs from SDRF, generate target file names, and barcode locations
 
@@ -109,11 +109,6 @@ if ( params.fields.containsKey('techrep')){
       .unique()
       .count()
       .set { TARGET_RESULT_COUNT }
-}
-
-FINAL_FASTQS.into{
-    FINAL_FASTQS_FOR_CONFIG
-    FINAL_FASTQS_FOR_ALEVIN
 }
 
 // Generate an index from the transcriptome
