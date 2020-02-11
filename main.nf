@@ -3,7 +3,7 @@
 sdrfFile = params.sdrf
 resultsRoot = params.resultsRoot
 referenceFasta = params.referenceFasta
-referenceGtf = params.referenceGtf
+transcriptToGene = params.transcriptToGene
 protocol = params.protocol
 
 manualDownloadFolder =''
@@ -25,7 +25,7 @@ Channel
     }
 
 REFERENCE_FASTA = Channel.fromPath( referenceFasta, checkIfExists: true )
-REFERENCE_GTF = Channel.fromPath( referenceGtf, checkIfExists: true )
+TRANSCRIPT_TO_GENE = Channel.fromPath( transcriptToGene, checkIfExists: true )
 
 // Read URIs from SDRF, generate target file names, and barcode locations
 
@@ -110,36 +110,6 @@ if ( params.fields.containsKey('techrep')){
       .set { TARGET_RESULT_COUNT }
 }
 
-// Remove anything from the cDNA that's not present in the GTF. Otherwise our
-// transcript_to_gene mapping will not contain all transcript IDs, and Alevin
-// gets upset. This also generates our transcript/ gene mappings
-
-process synchronise_cdna_gtf {
-
-    conda "${baseDir}/envs/cdna_gtf.yml"
-
-    cache 'deep'
-
-    memory { 5.GB * task.attempt }
-
-    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 || task.attempt < 3  ? 'retry' : 'ignore' }
-    maxRetries 3
-
-    input:
-        file(referenceFasta) from REFERENCE_FASTA.first()
-        file(referenceGtf) from REFERENCE_GTF.first()
-
-    output:
-        file('transcript_to_gene.txt') into TRANSCRIPT_TO_GENE
-        file('cleanedCdna.fa.gz') into REFERENCE_FASTA_CLEANED
-
-    """
-    gtf2featureAnnotation.R --gtf-file ${referenceGtf} --no-header --version-transcripts --filter-cdnas ${referenceFasta} \
-        --filter-cdnas-field "transcript_id" --filter-cdnas-output cleanedCdna.fa.gz --feature-type "transcript" \
-        --first-field "transcript_id" --output-file transcript_to_gene.txt --fields "transcript_id,gene_id"    
-    """
-}
-
 // Generate an index from the transcriptome
 
 process salmon_index {
@@ -154,7 +124,7 @@ process salmon_index {
     maxRetries 10
 
     input:
-        file(referenceFasta) from REFERENCE_FASTA_CLEANED
+        file(referenceFasta) from REFERENCE_FASTA
 
     output:
         file('salmon_index') into SALMON_INDEX
