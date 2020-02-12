@@ -24,7 +24,7 @@ Channel
         SDRF_FOR_COUNT
     }
 
-REFERENCE_FASTA = Channel.fromPath( referenceFasta, checkIfExists: true )
+REFERENCE_FASTA = Channel.fromPath( referenceFasta, checkIfExists: true ).first()
 TRANSCRIPT_TO_GENE = Channel.fromPath( transcriptToGene, checkIfExists: true ).first()
 
 // Read URIs from SDRF, generate target file names, and barcode locations
