@@ -1,4 +1,4 @@
 name: atlas-fastq-provider
 dependencies:
   - atlas-fastq-provider=0.1.15
-  - hca=6.4.0
+  - hca=7.0.1
