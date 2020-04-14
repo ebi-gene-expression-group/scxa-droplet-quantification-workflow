@@ -40,7 +40,8 @@ process download_fastqs {
     conda "${baseDir}/envs/atlas-fastq-provider.yml"
     
     maxForks params.maxConcurrentDownloads
-    time { 1.hour * task.attempt }
+    time { 3.hour * task.attempt }
+    memory { 20.GB * task.attempt }
 
     errorStrategy { task.attempt<=10 ? 'retry' : 'finish' } 
     
