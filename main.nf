@@ -111,6 +111,11 @@ if ( params.fields.containsKey('techrep')){
       .set { TARGET_RESULT_COUNT }
 }
 
+FINAL_FASTQS.into{
+    FINAL_FASTQS_FOR_CONFIG
+    FINAL_FASTQS_FOR_ALEVIN
+}
+
 // Generate an index from the transcriptome
 
 process salmon_index {
@@ -140,10 +145,10 @@ process salmon_index {
 process alevin_config {
 
     input:
-        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end), val(cellCount) from FINAL_FASTQS
+        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end), val(cellCount) from FINAL_FASTQS_FOR_CONFIG
 
     output:
-        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end), val(cellCount), stdout into FINAL_FASTQS_WITH_CONFIG
+        set val(runId), stdout into ALEVIN_CONFIG
     
     script:
 
@@ -191,7 +196,7 @@ process alevin {
 
     input:
         file(indexDir) from SALMON_INDEX
-        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end), val(cellCount), val(barcodeConfig) from FINAL_FASTQS_WITH_CONFIG
+        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end), val(cellCount), val(barcodeConfig) from FINAL_FASTQS_FOR_ALEVIN.join(ALEVIN_CONFIG)
         file(transcriptToGene) from TRANSCRIPT_TO_GENE
 
     output:
