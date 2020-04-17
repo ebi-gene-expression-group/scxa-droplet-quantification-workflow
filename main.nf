@@ -143,7 +143,7 @@ process alevin_config {
         set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end), val(cellCount) from FINAL_FASTQS
 
     output:
-        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end), val(cellCount), stdout from FINAL_FASTQS_WITH_CONFIG
+        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end), val(cellCount), stdout into FINAL_FASTQS_WITH_CONFIG
     
     script:
 
