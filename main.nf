@@ -3,7 +3,7 @@
 sdrfFile = params.sdrf
 resultsRoot = params.resultsRoot
 referenceFasta = params.referenceFasta
-referenceGtf = params.referenceGtf
+transcriptToGene = params.transcriptToGene
 protocol = params.protocol
 
 manualDownloadFolder =''
@@ -24,8 +24,8 @@ Channel
         SDRF_FOR_COUNT
     }
 
-REFERENCE_FASTA = Channel.fromPath( referenceFasta, checkIfExists: true )
-REFERENCE_GTF = Channel.fromPath( referenceGtf, checkIfExists: true )
+REFERENCE_FASTA = Channel.fromPath( referenceFasta, checkIfExists: true ).first()
+TRANSCRIPT_TO_GENE = Channel.fromPath( transcriptToGene, checkIfExists: true ).first()
 
 // Read URIs from SDRF, generate target file names, and barcode locations
 
@@ -40,7 +40,8 @@ process download_fastqs {
     conda "${baseDir}/envs/atlas-fastq-provider.yml"
     
     maxForks params.maxConcurrentDownloads
-    time { 1.hour * task.attempt }
+    time { 3.hour * task.attempt }
+    memory { 20.GB * task.attempt }
 
     errorStrategy { task.attempt<=10 ? 'retry' : 'finish' } 
     
@@ -110,34 +111,9 @@ if ( params.fields.containsKey('techrep')){
       .set { TARGET_RESULT_COUNT }
 }
 
-// Remove anything from the cDNA that's not present in the GTF. Otherwise our
-// transcript_to_gene mapping will not contain all transcript IDs, and Alevin
-// gets upset. This also generates our transcript/ gene mappings
-
-process synchronise_cdna_gtf {
-
-    conda "${baseDir}/envs/cdna_gtf.yml"
-
-    cache 'deep'
-
-    memory { 5.GB * task.attempt }
-
-    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 || task.attempt < 3  ? 'retry' : 'ignore' }
-    maxRetries 3
-
-    input:
-        file(referenceFasta) from REFERENCE_FASTA.first()
-        file(referenceGtf) from REFERENCE_GTF.first()
-
-    output:
-        file('transcript_to_gene.txt') into TRANSCRIPT_TO_GENE
-        file('cleanedCdna.fa.gz') into REFERENCE_FASTA_CLEANED
-
-    """
-    gtf2featureAnnotation.R --gtf-file ${referenceGtf} --no-header --version-transcripts --filter-cdnas ${referenceFasta} \
-        --filter-cdnas-field "transcript_id" --filter-cdnas-output cleanedCdna.fa.gz --feature-type "transcript" \
-        --first-field "transcript_id" --output-file transcript_to_gene.txt --fields "transcript_id,gene_id"    
-    """
+FINAL_FASTQS.into{
+    FINAL_FASTQS_FOR_CONFIG
+    FINAL_FASTQS_FOR_ALEVIN
 }
 
 // Generate an index from the transcriptome
@@ -154,7 +130,7 @@ process salmon_index {
     maxRetries 10
 
     input:
-        file(referenceFasta) from REFERENCE_FASTA_CLEANED
+        file(referenceFasta) from REFERENCE_FASTA
 
     output:
         file('salmon_index') into SALMON_INDEX
@@ -164,28 +140,16 @@ process salmon_index {
     """
 }
 
-// Run Alevin per row
+// Derive Alevin barcodeconfig
 
-process alevin {
-
-    conda "${baseDir}/envs/alevin.yml"
-    
-    cache 'deep'
-
-    memory { 20.GB * task.attempt }
-    cpus 12
-
-    errorStrategy { task.exitStatus !=2 && (task.exitStatus == 130 || task.exitStatus == 137 || task.attempt < 3)  ? 'retry' : 'ignore' }
-    maxRetries 10
+process alevin_config {
 
     input:
-        file(indexDir) from SALMON_INDEX
-        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end), val(cellCount) from FINAL_FASTQS
-        file(transcriptToGene) from TRANSCRIPT_TO_GENE
+        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end), val(cellCount) from FINAL_FASTQS_FOR_CONFIG
 
     output:
-        set val(runId), file("${runId}"),  file("${runId}_pre/alevin/raw_cb_frequency.txt") into ALEVIN_RESULTS
-
+        set val(runId), stdout into ALEVIN_CONFIG
+    
     script:
 
         def barcodeConfig = ''
@@ -206,29 +170,43 @@ process alevin {
             
         }
 
+        """
+        if [ -z "$barcodeConfig" ]; then
+            echo Input of $protocol results is misconfigured 1>&2
+            exit 1
+        fi
+
+        echo -n "$barcodeConfig"
+        """
+}
+
+// Run Alevin per row
+
+process alevin {
+
+    conda "${baseDir}/envs/alevin.yml"
+    
+    cache 'deep'
+
+    memory { 20.GB * task.attempt }
+    cpus 12
+
+    errorStrategy { task.exitStatus !=2 && (task.exitStatus == 130 || task.exitStatus == 137 || task.attempt < 3)  ? 'retry' : 'ignore' }
+    maxRetries 10
+
+    input:
+        file(indexDir) from SALMON_INDEX
+        set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end), val(cellCount), val(barcodeConfig) from FINAL_FASTQS_FOR_ALEVIN.join(ALEVIN_CONFIG)
+        file(transcriptToGene) from TRANSCRIPT_TO_GENE
+
+    output:
+        set val(runId), file("${runId}"),  file("${runId}/alevin/raw_cb_frequency.txt") into ALEVIN_RESULTS
+
     """
-    if [ -z "$barcodeConfig" ]; then
-        echo Input of $protocol results is misconfigured 1>&2
-        exit 1
-    fi
-
-    # Do a pre-run to derive a starting whitelist, see https://github.com/COMBINE-lab/salmon/issues/362
-
     salmon alevin -l ${params.salmon.libType} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-        ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_pre --tgMap ${transcriptToGene} --dumpFeatures --noQuant
-   
-    # Derive a relaxed whitelist, removing only the most obvious junk 
-
-    if [ \$? -eq 0 ]; then 
-        awk '{ if (\$2 > ${params.minCbFreq }) { print \$1} }' ${runId}_pre/alevin/raw_cb_frequency.txt > pre_whitelist.txt
-    fi
-
-    # Supply the whitelist to the main Alevin run
-
-    salmon alevin -l ${params.salmon.libType} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-        ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_tmp --tgMap ${transcriptToGene} --whitelist pre_whitelist.txt \
-        --forceCells \$(cat pre_whitelist.txt | wc -l | tr -d '\\n') --dumpMtx
- 
+        ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_tmp --tgMap ${transcriptToGene} --dumpFeatures --keepCBFraction 1 \
+        --freqThreshold ${params.minCbFreq} --dumpMtx
+    
     mv ${runId}_tmp ${runId}
     """
 }
