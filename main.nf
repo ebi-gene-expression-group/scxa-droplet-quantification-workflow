@@ -30,7 +30,13 @@ TRANSCRIPT_TO_GENE = Channel.fromPath( transcriptToGene, checkIfExists: true ).f
 // Read URIs from SDRF, generate target file names, and barcode locations
 
 SDRF_FOR_FASTQS
-    .map{ row-> tuple(row["${params.fields.run}"], row["${params.fields.cdna_uri}"], row["${params.fields.cell_barcode_uri}"], file(row["${params.fields.cdna_uri}"]).getName(), file(row["${params.fields.cell_barcode_uri}"]).getName(), row["${params.fields.cell_barcode_size}"], row["${params.fields.umi_barcode_size}"], row["${params.fields.end}"], row["${params.fields.cell_count}"]) }
+    .map{ row-> 
+      controlled_access='no'
+      if (  params.fields.containsKey('controlled_access')){
+        controlled_access=row["${params.fields.controlled_access}"]
+      }
+      tuple(row["${params.fields.run}"], row["${params.fields.cdna_uri}"], row["${params.fields.cell_barcode_uri}"], file(row["${params.fields.cdna_uri}"]).getName(), file(row["${params.fields.cell_barcode_uri}"]).getName(), row["${params.fields.cell_barcode_size}"], row["${params.fields.umi_barcode_size}"], row["${params.fields.end}"], row["${params.fields.cell_count}"], controlled_access) 
+    }    
     .set { FASTQ_RUNS }
 
 // Call the download script to retrieve run fastqs
@@ -43,10 +49,10 @@ process download_fastqs {
     time { 5.hour * task.attempt }
     memory { 20.GB * task.attempt }
 
-    errorStrategy { task.attempt<=10 ? 'retry' : 'finish' } 
+    errorStrategy { task.attempt<=10 & task.exitStatus != 4 ? 'retry' : 'finish' } 
     
     input:
-        set runId, cdnaFastqURI, barcodesFastqURI, cdnaFastqFile, barcodesFastqFile, val(barcodeLength), val(umiLength), val(end), val(cellCount) from FASTQ_RUNS
+        set runId, cdnaFastqURI, barcodesFastqURI, cdnaFastqFile, barcodesFastqFile, val(barcodeLength), val(umiLength), val(end), val(cellCount), val(controlledAccess) from FASTQ_RUNS
 
     output:
         set val(runId), file("${cdnaFastqFile}"), file("${barcodesFastqFile}"), val(barcodeLength), val(umiLength), val(end), val(cellCount) into DOWNLOADED_FASTQS
@@ -60,7 +66,10 @@ process download_fastqs {
             exit 2    
         elif [ -n "$manualDownloadFolder" ] && [ ! -e $manualDownloadFolder/${cdnaFastqFile} ] && [ -e $manualDownloadFolder/${barcodesFastqFile} ]; then
             echo 'cDNA file $cdnaFastqFile is not available locally, but barcodes file $barcodesFastqFile is 1>&2
-            exit 3    
+            exit 3 
+        elif [ "$controlledAccess" = 'yes' ]; then
+            echo "One or both of ${cdnaFastqFile}, ${barcodesFastqFile} are not available at $manualDownloadFolder/ for this controlled access experiment" 1>&2
+            exit 4   
         else
             confPart=''
             if [ -e "$NXF_TEMP/atlas-fastq-provider/download_config.sh" ]; then
