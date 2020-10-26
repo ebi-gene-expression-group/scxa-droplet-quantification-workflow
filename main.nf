@@ -212,8 +212,8 @@ process alevin {
         set val(runId), file("${runId}"),  file("${runId}/alevin/raw_cb_frequency.txt") into ALEVIN_RESULTS
 
     """
-    salmon alevin -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-        ${barcodeConfig} -i ${indexDir} -p ${task.cpus} -o ${runId}_tmp --tgMap ${transcriptToGene} --dumpFeatures --keepCBFraction 1 \
+    salmon alevin ${barcodeConfig} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
+        -i ${indexDir} -p ${task.cpus} -o ${runId}_tmp --tgMap ${transcriptToGene} --dumpFeatures --keepCBFraction 1 \
         --freqThreshold ${params.minCbFreq} --dumpMtx
     
     mv ${runId}_tmp ${runId}
