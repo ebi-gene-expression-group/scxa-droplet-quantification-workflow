@@ -197,7 +197,7 @@ process alevin_config {
             if [ \$? -ne 0 ]; then
                 barcodesGood=1
             fi
-        done <<< \$(ls barcodes*.fastq.gz)
+        done <<< "\$(ls barcodes*.fastq.gz)"
         set -e
         exit \$barcodesGood
         """
