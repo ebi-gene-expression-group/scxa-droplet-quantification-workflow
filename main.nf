@@ -194,7 +194,7 @@ process alevin_config {
         set +e
         while read -r l; do
             check_barcode_read.sh -r \$l -b $barcodeLength -u $umiLength -n 1000000
-            if [ $? -ne 0 ]; then
+            if [ \$? -ne 0 ]; then
                 barcodesGood=1
             fi
         done <<< \$(ls barcodes*.fastq.gz)
