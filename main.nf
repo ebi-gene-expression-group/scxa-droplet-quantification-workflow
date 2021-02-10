@@ -191,13 +191,14 @@ process alevin_config {
 
         targetLen=\$(($umiLength + $barcodeLength))
         barcodesGood=0
+        set +e
         while read -r l; do
-            readLen=\$(zcat \$l | sed '2q;d' | tr -d '\\n' | wc -m)
-            if [ "\$readLen" -lt "\$targetLen" ]; then
-                echo "\$l has reads of length \$readLen, which is not what we expected with barcode length of $barcodeLength and a UMI length of $umiLength" 1>&2
+            check_barcode_read.sh -r \$l -b $barcodeLength -u $umiLength -n 1000000
+            if [ $? -ne 0 ]; then
                 barcodesGood=1
             fi
         done <<< \$(ls barcodes*.fastq.gz)
+        set -e
         exit \$barcodesGood
         """
 }
