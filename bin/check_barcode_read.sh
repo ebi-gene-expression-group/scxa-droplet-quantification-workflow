@@ -73,10 +73,10 @@ if [ "$nLengths" -gt 1 ]; then
 fi
 
 if [ "$longest" -gt "$targetLength" ]; then
-    echo "WARNING: $qualifier UMI/ barcode reads in $r are longer than UMI + cell barcode (=$targetLength), max length: $longest. This happens with sequencer run-on, but make sure you're sure of the barcode configuration" 1>&2
+    echo "WARNING: $qualifier UMI/ barcode reads in $(basename $r) are longer than UMI + cell barcode (=$targetLength), max length: $longest. This happens with sequencer run-on, but make sure you're sure of the barcode configuration" 1>&2
 elif [ "$longest" -lt "$targetLength" ]; then
-    echo "[ERROR} No reads in $r meet UMI + cell barcode length threshold of $targetLength (max length: $longest), these reads cannot pass to droplet quantification." 1>&2
+    echo "[ERROR} No reads in $(basename $r) meet UMI + cell barcode length threshold of $targetLength (max length: $longest), these reads cannot pass to droplet quantification." 1>&2
     exit 1
 else
-    echo "[SUCCESS: $qualifier reads in $r match UMI/ cell barcode length threshold of $targetLength (max length: $longest)"
+    echo "[SUCCESS: $qualifier reads in $(basename $r) match UMI/ cell barcode length threshold of $targetLength (max length: $longest)"
 fi
