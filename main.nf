@@ -76,7 +76,12 @@ process download_fastqs {
                 confPart=" -c $NXF_TEMP/atlas-fastq-provider/download_config.sh"
             fi 
             fetchFastq.sh -f ${cdnaFastqURI} -t ${cdnaFastqFile} -m ${params.downloadMethod} \$confPart
-            fetchFastq.sh -f ${barcodesFastqURI} -t ${barcodesFastqFile} -m ${params.downloadMethod} \$confPart
+            
+            # Allow for the first download also having produced the second output already
+
+            if [ ! -e ${barcodesFastqFile} ]; then
+                fetchFastq.sh -f ${barcodesFastqURI} -t ${barcodesFastqFile} -m ${params.downloadMethod} \$confPart
+            fi
         fi
     """
 }
