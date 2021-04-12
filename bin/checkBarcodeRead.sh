@@ -47,7 +47,7 @@ lengths=$(zcat $r | \
     head -n $((4 * $n)) | \
     sed -n '2~4p' | \
     awk '{print length()}' | \
-    sort -r | uniq)
+    sort -nr | uniq)
 
 # Find number of unque lengths
 
