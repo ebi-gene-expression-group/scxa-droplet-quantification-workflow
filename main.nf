@@ -74,9 +74,17 @@ process download_fastqs {
             confPart=''
             if [ -e "$NXF_TEMP/atlas-fastq-provider/download_config.sh" ]; then
                 confPart=" -c $NXF_TEMP/atlas-fastq-provider/download_config.sh"
-            fi 
+            fi
+            # Stop fastq downloader from testing different methods -assume the control workflow has done that 
+            export NOPROBE=1
+        
             fetchFastq.sh -f ${cdnaFastqURI} -t ${cdnaFastqFile} -m ${params.downloadMethod} \$confPart
-            fetchFastq.sh -f ${barcodesFastqURI} -t ${barcodesFastqFile} -m ${params.downloadMethod} \$confPart
+            
+            # Allow for the first download also having produced the second output already
+
+            if [ ! -e ${barcodesFastqFile} ]; then
+                fetchFastq.sh -f ${barcodesFastqURI} -t ${barcodesFastqFile} -m ${params.downloadMethod} \$confPart
+            fi
         fi
     """
 }
