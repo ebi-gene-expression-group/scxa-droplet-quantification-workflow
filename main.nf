@@ -4,6 +4,7 @@ sdrfFile = params.sdrf
 resultsRoot = params.resultsRoot
 referenceFasta = params.referenceFasta
 transcriptToGene = params.transcriptToGene
+transcriptomeIndex = params.transcriptomeIndex
 protocol = params.protocol
 
 manualDownloadFolder =''
@@ -24,7 +25,6 @@ Channel
         SDRF_FOR_COUNT
     }
 
-REFERENCE_FASTA = Channel.fromPath( referenceFasta, checkIfExists: true ).first()
 TRANSCRIPT_TO_GENE = Channel.fromPath( transcriptToGene, checkIfExists: true ).first()
 
 // Read URIs from SDRF, generate target file names, and barcode locations
@@ -133,30 +133,6 @@ FINAL_FASTQS.into{
     FINAL_FASTQS_FOR_ALEVIN
 }
 
-// Generate an index from the transcriptome
-
-process salmon_index {
-
-    conda "${baseDir}/envs/alevin.yml"
-
-    cache 'deep'
-    
-    memory { 20.GB * task.attempt }
-
-    errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 || task.attempt < 3  ? 'retry' : 'ignore' }
-    maxRetries 10
-
-    input:
-        file(referenceFasta) from REFERENCE_FASTA
-
-    output:
-        file('salmon_index') into SALMON_INDEX
-
-    """
-    salmon index -t ${referenceFasta} -i salmon_index -k ${params.salmon.index.kmerSize}
-    """
-}
-
 // Derive Alevin barcodeconfig
 
 process alevin_config {
@@ -226,7 +202,6 @@ process alevin {
     maxRetries 10
 
     input:
-        file(indexDir) from SALMON_INDEX
         set val(runId), file("cdna*.fastq.gz"), file("barcodes*.fastq.gz"), val(barcodeLength), val(umiLength), val(end), val(cellCount), val(barcodeConfig) from FINAL_FASTQS_FOR_ALEVIN.join(ALEVIN_CONFIG)
         file(transcriptToGene) from TRANSCRIPT_TO_GENE
 
@@ -235,7 +210,7 @@ process alevin {
 
     """
     salmon alevin ${barcodeConfig} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-        -i ${indexDir} -p ${task.cpus} -o ${runId}_tmp --tgMap ${transcriptToGene} --dumpFeatures --keepCBFraction 1 \
+        -i ${transcriptomeIndex} -p ${task.cpus} -o ${runId}_tmp --tgMap ${transcriptToGene} --dumpFeatures --keepCBFraction 1 \
         --freqThreshold ${params.minCbFreq} --dumpMtx
 
     min_mapping=\$(grep "percent_mapped" ${runId}_tmp/aux_info/meta_info.json | sed 's/,//g' | awk -F': ' '{print \$2}' | sort -n | head -n 1)   
