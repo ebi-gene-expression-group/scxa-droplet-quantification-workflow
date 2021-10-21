@@ -72,9 +72,10 @@ process download_fastqs {
             exit 4   
         else
             confPart=''
-            if [ -e "$NXF_TEMP/atlas-fastq-provider/download_config.sh" ]; then
-                confPart=" -c $NXF_TEMP/atlas-fastq-provider/download_config.sh"
-            fi
+            if [ -n "$FASTQ_PROVIDER_CONFIG" ] && [ -e "$FASTQ_PROVIDER_CONFIG" ]; then
+                confPart=" -c $FASTQ_PROVIDER_CONFIG"
+            fi 
+
             # Stop fastq downloader from testing different methods -assume the control workflow has done that 
             export NOPROBE=1
         
