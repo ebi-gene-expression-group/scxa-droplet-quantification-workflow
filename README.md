@@ -1,8 +1,8 @@
 # Single Cell Expression Atlas droplet quantification workflow
 
-This is the quantification component for used for droplet-based studies in Single Cell Expression Atlas. It's basically just calling Alevin, with some logic for sample handling.
+This is the Nextflow-based quantification component for used for droplet-based studies in Single Cell Expression Atlas. It's basically just calling Alevin, with some logic for sample handling.
 
-For anyone starting out with droplet RNA-seq analysis, especially using Alevin, we highly recommend [this tutorial](https://training.galaxyproject.org/training-material/topics/transcriptomics/tutorials/droplet-quantification-preprocessing/tutorial.html), which covers a workflow similar to the one in this workflow.
+For anyone starting out with droplet RNA-seq analysis, especially using Alevin, we highly recommend [this tutorial](https://training.galaxyproject.org/training-material/topics/transcriptomics/tutorials/droplet-quantification-preprocessing/tutorial.html), which covers a workflow similar to the one used here.
 
 ## Summary of steps
 
@@ -26,7 +26,7 @@ The workflow requires as input:
 
 ### Transcript to gene map
 
-This is simply a tab-delmited file with transcrip and gene identifiers, like:
+This is simply a tab-delmited file with transcript and gene identifiers, like:
 
 ```
 FBtr0091512	FBgn0250732
@@ -87,11 +87,15 @@ params{
 }
 ```
 
+This configuration refers to the fields in the samples table and describes how they should be used to control how Alevin is run.
+
 In this example the libraries are 10X v2, which means they have a 16bp cell barcode and 10bp unique molecular identifier (UMI). The barcode configuration is illustrated in the samples file above, but you should change the configuration dependent on your libraries, for example 10Xv3 libraries have 12bp UMIs. 
 
 The allowable protocol names are [here](https://github.com/ebi-gene-expression-group/scxa-droplet-quantification-workflow/blob/b99ebd9192c2c6f690b0563a7a36eede7d8f401e/nextflow.config#L39). Take special care to use the 5prime library time if necesary for the newer 10X 5-prime libraries, since if you fail to do so your mapping rate will be extremely low.
 
 ## Running the workflow
+
+The workflow uses Conda to provide software dependencies for individual workflow steps. You must also have Nextflow itself installed. With those prerequisites in place the workflow is run like:
 
 ```
 nextflow run \
