@@ -133,4 +133,11 @@ This shows a barcode plot for the library and illustrates the impact of running 
 
 This plot should show a clear steep-as-possible dropoff between populated and unpopulated droplets. 
 
-In this example you should be able to see a population of droplets to the right of the top plot that are absent in the bottom one, removed by emptyDrops(). Note that we have not simply applied one of the thresholds illustrated in the figure, since this can lead to issues with removal of certain genuine cell populations. See the [emptyDrops paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1662-y) to understand what that tool actually does. We would also again point you at [this tutorial](https://training.galaxyproject.org/training-material/topics/transcriptomics/tutorials/droplet-quantification-preprocessing/tutorial.html) for more in-depth coverage of this.  
+In this example you should be able to see a population of droplets to the right of the top plot that are absent in the bottom one, removed by emptyDrops(). Note that we have not simply applied one of the thresholds illustrated in the figure, since this can lead to issues with removal of certain genuine cell populations. See the [emptyDrops paper](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1662-y) to understand what that tool actually does. We would also again point you at [this tutorial](https://training.galaxyproject.org/training-material/topics/transcriptomics/tutorials/droplet-quantification-preprocessing/tutorial.html) for more in-depth coverage of this.
+
+## Next steps
+
+With these results in hand we do the following (you may want to do similarly)
+
+ 1. [Aggregate the matrices from different libraries](https://github.com/ebi-gene-expression-group/scxa-aggregation-workflow)
+ 2. [Do downstream analysis in Scanpy](https://github.com/ebi-gene-expression-group/scxa-workflows)
