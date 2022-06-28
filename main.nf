@@ -194,6 +194,7 @@ process alevin_config {
 }
 
 // Run Alevin per row
+// Implement alevin_fry
 
 process alevin {
 
