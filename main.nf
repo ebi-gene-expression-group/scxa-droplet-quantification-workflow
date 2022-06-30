@@ -6,6 +6,7 @@ referenceFasta = params.referenceFasta
 transcriptToGene = params.transcriptToGene
 transcriptomeIndex = params.transcriptomeIndex
 protocol = params.protocol
+mode = params.mode
 
 manualDownloadFolder =''
 if ( params.containsKey('manualDownloadFolder')){
