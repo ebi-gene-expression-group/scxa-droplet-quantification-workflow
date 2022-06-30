@@ -2,4 +2,3 @@ name: alevin-fry
 dependencies:
   - salmon=1.8
   - alevin-fry
-  - gffread 
