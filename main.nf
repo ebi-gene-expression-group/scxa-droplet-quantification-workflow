@@ -271,13 +271,13 @@ process alevin_to_mtx {
     maxRetries 20
 
     input:
-        set val(runId), file(alevinResult), file(rawBarcodeFreq) from ALEVIN_RESULTS_FOR_PROCESSING
+        set val(runId), file(alevinResult) from ALEVIN_RESULTS_FOR_PROCESSING
 
     output:
         set val(runId), file("counts_mtx") into ALEVIN_MTX
 
     """
-    alevinMtxTo10x.py --cell_prefix ${runId}- $alevinResult counts_mtx
+    alevinFryMtxTo10x.py --cell_prefix ${runId}- $alevinResult counts_mtx  ${params.mode}
     """ 
 }
 
