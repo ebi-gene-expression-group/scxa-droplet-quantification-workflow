@@ -3,3 +3,4 @@ dependencies:
   - pandas
   - scipy
   - numpy
+  - pyroe=0.5.0
