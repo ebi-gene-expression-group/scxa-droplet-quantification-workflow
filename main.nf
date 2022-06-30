@@ -198,7 +198,7 @@ process alevin_config {
 
 process alevin {
 
-    conda "${baseDir}/envs/alevin.yml"
+    conda "${baseDir}/envs/alevin_fry.yml"
     
     cache 'deep'
 
