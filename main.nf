@@ -213,22 +213,44 @@ process alevin {
         file(transcriptToGene) from TRANSCRIPT_TO_GENE
 
     output:
-        set val(runId), file("${runId}"),  file("${runId}/alevin/raw_cb_frequency.txt") into ALEVIN_RESULTS
+        set val(runId), file("${runId}_ALEVIN_fry_quant") into ALEVIN_RESULTS
 
+    
     """
-    salmon alevin ${barcodeConfig} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-        -i ${transcriptomeIndex} -p ${task.cpus} -o ${runId}_tmp --tgMap ${transcriptToGene} --dumpFeatures --keepCBFraction 1 \
-        --freqThreshold ${params.minCbFreq} --dumpMtx
+    
+    salmon alevin ${barcodeConfig} --sketch -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
+        -i ${transcriptomeIndex} -p ${task.cpus} -o ${runId}_ALEVIN_fry_map 
 
-    min_mapping=\$(grep "percent_mapped" ${runId}_tmp/aux_info/meta_info.json | sed 's/,//g' | awk -F': ' '{print \$2}' | sort -n | head -n 1)   
+    if [ "${params.protocol}" = "10xv2" ]
+    then
+        alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d fw --unfiltered-pl ${baseDir}/whitelist/737K-august-2016.txt --output-dir ${runId}_ALEVIN_fry_quant_tmp --min-reads 10
+    elif [ "${params.protocol}" = "10xv3" ]
+    then
+        alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d fw --unfiltered-pl ${baseDir}/whitelist/3M-february-2018_onecollum.txt --output-dir ${runId}_ALEVIN_fry_quant_tmp --min-reads 10
+    elif [ "${params.protocol}" = "10x5prime" ]
+    then
+        alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d rc  --output-dir ${runId}_ALEVIN_fry_quant_tmp --force-cells 100000 --min-reads 10
+    else
+        alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d fw --output-dir ${runId}_ALEVIN_fry_quant_tmp  --force-cells 100000 --min-reads 10
+    fi
+
+    alevin-fry collate -i ${runId}_ALEVIN_fry_quant_tmp -r ${runId}_ALEVIN_fry_map -t 16
+    alevin-fry quant -i ${runId}_ALEVIN_fry_quant_tmp -m ${transcriptToGene} -t 16 -r cr-like-em -o ${runId}_ALEVIN_fry_quant_tmp --use-mtx
+
+    TOTAL=\$(grep "num_processed" ${runId}_ALEVIN_fry_map/aux_info/meta_info.json |  awk '{split(\$0, array, ": "); print array[2]}'| sed 's/,//g')
+    MAPPED=\$(grep "num_mapped" ${runId}_ALEVIN_fry_map/aux_info/meta_info.json |  awk '{split(\$0, array, ": "); print array[2]}'| sed 's/,//g')
+    min_mapping=\$(echo "scale=2;((\$MAPPED * 100) / \$TOTAL)"|bc)
+
     if [ "\${min_mapping%.*}" -lt "${params.minMappingRate}" ]; then
         echo "Minimum mapping rate (\$min_mapping) is less than the specified threshold of ${params.minMappingRate}" 1>&2
         exit 1 
     fi
- 
-    mv ${runId}_tmp ${runId}
+
+    mv ${runId}_ALEVIN_fry_quant_tmp ${runId}_ALEVIN_fry_quant
+
     """
-}
+
+        }
 
 ALEVIN_RESULTS
     .into{
