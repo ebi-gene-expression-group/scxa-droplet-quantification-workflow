@@ -306,13 +306,13 @@ process droplet_qc_plot{
     maxRetries 20
 
     input:
-        set val(runId), file(alevinResult), file(rawBarcodeFreq), file(mtx) from ALEVIN_QC_INPUTS
+        set val(runId), file(alevinResult), file(mtx) from ALEVIN_QC_INPUTS
 
     output:
         set val(runId), file("${runId}.png") into ALEVIN_QC_PLOTS
 
     """
-    dropletBarcodePlot.R $rawBarcodeFreq $mtx $runId ${runId}.png
+    dropletBarcodePlot.R --mtx-matrix ${params.name}_counts_mtx_raw/matrix.mtx --label $runId --output-plot barcode_rank.png
     """ 
 }
 
