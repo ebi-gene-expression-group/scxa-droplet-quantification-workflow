@@ -1,6 +1,6 @@
 # Single Cell Expression Atlas droplet quantification workflow
 
-This is the Nextflow-based quantification component for used for droplet-based studies in Single Cell Expression Atlas. It's basically just calling Alevin, with some logic for sample handling.
+This is the Nextflow-based quantification component for used for droplet-based studies in Single Cell Expression Atlas. It's basically just calling Alevin-fry, with some logic for sample handling.
 
 For anyone starting out with droplet RNA-seq analysis, especially using Alevin, we highly recommend [this tutorial](https://training.galaxyproject.org/training-material/topics/transcriptomics/tutorials/droplet-quantification-preprocessing/tutorial.html), which covers a workflow similar to the one used here.
 
@@ -18,7 +18,7 @@ The workflow does the following:
 
 The workflow requires as input:
 
- - A pre-prepared [Salmon splici-index]([https://salmon.readthedocs.io/en/latest/salmon.html#preparing-transcriptome-indices-mapping-based-mode](https://combine-lab.github.io/alevin-fry-tutorials/2021/improving-txome-specificity/))
+ - A pre-prepared [Salmon splici-index](https://combine-lab.github.io/alevin-fry-tutorials/2021/improving-txome-specificity/), that is build from a transcript containing spliced transcripts and introns
  - A three-collumn transcript-to-gene mapping file used by Alevin-fry to summarise quantifications to the gene level, is produced when building the splici trasncriptome 
  - A tabular samples file (SDRF) containing information about the libraries to be quantified
  - A Nextflow configuration file describing the data in the tabular samples table
