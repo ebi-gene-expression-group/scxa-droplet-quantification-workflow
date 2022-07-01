@@ -9,8 +9,8 @@ For anyone starting out with droplet RNA-seq analysis, especially using Alevin, 
 The workflow does the following:
 
  - Downloads fastq files from specified URIs using our [FASTQ provider](https://github.com/ebi-gene-expression-group/atlas-fastq-provider). The FASTQ provider does some special things for EBI users, but will just wget specified files by default.
- - Interprets provided sample and configurations to determine the correct arguments for Alevin, combining technical replicate groups where appropriate for analysis.
- - Runs [Alevin-fry]([https://salmon.readthedocs.io/en/latest/alevin.html](https://alevin-fry.readthedocs.io/en/latest/))
+ - Interprets provided sample and configurations to determine the correct arguments for Alevin-fry, combining technical replicate groups where appropriate for analysis.
+ - Runs [Alevin-fry](https://alevin-fry.readthedocs.io/en/latest/)
  - Makes a droplet barcode plot for each library
  - Runs [emptyDrops](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1662-y) to remove remove droplets clearly without cells. 
 
@@ -19,9 +19,10 @@ The workflow does the following:
 The workflow requires as input:
 
  - A pre-prepared [Salmon splici-index]([https://salmon.readthedocs.io/en/latest/salmon.html#preparing-transcriptome-indices-mapping-based-mode](https://combine-lab.github.io/alevin-fry-tutorials/2021/improving-txome-specificity/))
- - A three-collumn transcript-to-gene mapping file used by Alevin to summarise quantifications to the gene level, is produced when building the splici trasncriptome 
+ - A three-collumn transcript-to-gene mapping file used by Alevin-fry to summarise quantifications to the gene level, is produced when building the splici trasncriptome 
  - A tabular samples file (SDRF) containing information about the libraries to be quantified
  - A Nextflow configuration file describing the data in the tabular samples table
+ - A string specifying wether the experiemnt is snRNA or scRNA
  - An output directory for results
 
 ### Transcript to gene map
