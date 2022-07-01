@@ -22,7 +22,7 @@ The workflow requires as input:
  - A three-collumn transcript-to-gene mapping file used by Alevin-fry to summarise quantifications to the gene level, is produced when building the splici transcriptome 
  - A tabular samples file (SDRF) containing information about the libraries to be quantified
  - A Nextflow configuration file describing the data in the tabular samples table
- - A string specifying wether the experiemnt is snRNA or scRNA
+ - A string specifying whether the experiment is snRNA or scRNA
  - An output directory for results
 
 ### Transcript to gene map
