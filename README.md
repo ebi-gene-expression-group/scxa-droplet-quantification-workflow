@@ -19,7 +19,7 @@ The workflow does the following:
 The workflow requires as input:
 
  - A pre-prepared [Salmon splici-index](https://combine-lab.github.io/alevin-fry-tutorials/2021/improving-txome-specificity/), that is build from a transcript containing spliced transcripts and introns
- - A three-collumn transcript-to-gene mapping file used by Alevin-fry to summarise quantifications to the gene level, is produced when building the splici trasncriptome 
+ - A three-collumn transcript-to-gene mapping file used by Alevin-fry to summarise quantifications to the gene level, is produced when building the splici transcriptome 
  - A tabular samples file (SDRF) containing information about the libraries to be quantified
  - A Nextflow configuration file describing the data in the tabular samples table
  - A string specifying wether the experiemnt is snRNA or scRNA
@@ -106,6 +106,7 @@ nextflow run \
     --resultsRoot OUTPUT_DIR \
     --transcriptToGene TRANSCRIPT_TO_GENE \
     --transcriptomeIndex TRANSCRIPTOME_INDEX \
+    --mode scRNA
     -resume \
     main.nf \
 ```
