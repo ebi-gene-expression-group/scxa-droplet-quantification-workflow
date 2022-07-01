@@ -10,7 +10,7 @@ The workflow does the following:
 
  - Downloads fastq files from specified URIs using our [FASTQ provider](https://github.com/ebi-gene-expression-group/atlas-fastq-provider). The FASTQ provider does some special things for EBI users, but will just wget specified files by default.
  - Interprets provided sample and configurations to determine the correct arguments for Alevin, combining technical replicate groups where appropriate for analysis.
- - Runs [Alevin](https://salmon.readthedocs.io/en/latest/alevin.html)
+ - Runs [Alevin-fry]([https://salmon.readthedocs.io/en/latest/alevin.html](https://alevin-fry.readthedocs.io/en/latest/))
  - Makes a droplet barcode plot for each library
  - Runs [emptyDrops](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1662-y) to remove remove droplets clearly without cells. 
 
@@ -18,8 +18,8 @@ The workflow does the following:
 
 The workflow requires as input:
 
- - A pre-prepared [Salmon index](https://salmon.readthedocs.io/en/latest/salmon.html#preparing-transcriptome-indices-mapping-based-mode)
- - A transcript-to-gene mapping file used by Alevin to summarise quantifications to the gene level
+ - A pre-prepared [Salmon splici-index]([https://salmon.readthedocs.io/en/latest/salmon.html#preparing-transcriptome-indices-mapping-based-mode](https://combine-lab.github.io/alevin-fry-tutorials/2021/improving-txome-specificity/))
+ - A three-collumn transcript-to-gene mapping file used by Alevin to summarise quantifications to the gene level, is produced when building the splici trasncriptome 
  - A tabular samples file (SDRF) containing information about the libraries to be quantified
  - A Nextflow configuration file describing the data in the tabular samples table
  - An output directory for results
@@ -29,16 +29,16 @@ The workflow requires as input:
 This is simply a tab-delmited file with transcript and gene identifiers, like:
 
 ```
-FBtr0091512	FBgn0250732
-FBtr0334671	FBgn0250732
-FBtr0114531	FBgn0250732
-FBti0060344-RA	FBti0060344
-FBtr0473385	FBgn0286036
-FBtr0078591	FBgn0037409
-FBtr0301479	FBgn0027948
-FBtr0304801	FBgn0027948
-FBtr0304803	FBgn0027948
-FBtr0304802	FBgn0027948
+FBti0019092-RA	FBti0019092	S
+FBti0019093-RA	FBti0019093	S
+FBti0019100-RA	FBti0019100	S
+FBti0019102-RA	FBti0019102	S
+FBti0019104-RA	FBti0019104	S
+FBti0019106-RA	FBti0019106	S
+FBti0019111-RA	FBti0019111	S
+FBti0019113-RA	FBti0019113	S
+FBti0019115-RA	FBti0019115	S
+FBti0019116-RA	FBti0019116	S
 ...
 ```
 
