@@ -1,6 +1,6 @@
-name: parse_alevin
+name: parse_alevin_fry
 dependencies:
   - pandas
   - scipy
   - numpy
-  - pyroe=0.5.0
+  - pyroe
