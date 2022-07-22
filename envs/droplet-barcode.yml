@@ -1,0 +1,7 @@
+name: droplet-barcode
+dependencies:
+  - r-optparse  
+  - r-ggplot2
+  - r-gridExtra
+  - bioconductor-dropletutils=1.4.2
+  - r-Matrix
