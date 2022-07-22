@@ -312,7 +312,7 @@ process droplet_qc_plot{
         set val(runId), file("${runId}.png") into ALEVIN_QC_PLOTS
 
     """
-    dropletBarcodePlot.R --mtx-matrix ${params.name}_counts_mtx_raw/matrix.mtx --label $runId --output-plot barcode_rank.png
+    dropletBarcodePlot.R --mtx-matrix counts_mtx/matrix.mtx --label $runId --output-plot barcode_rank.png
     """ 
 }
 
