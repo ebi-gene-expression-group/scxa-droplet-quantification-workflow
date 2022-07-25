@@ -25,24 +25,34 @@ parser = argparse.ArgumentParser(description='Convert Alevin outputs to 10X .mtx
 parser.add_argument('alevin_fry_quant', help = 'Alevin output directory')
 parser.add_argument('mtx_out', help = 'Output directory for converted results')
 parser.add_argument('--cell_prefix', dest='cell_prefix', default='', help = 'Prefix to apply to cell barcodes')
-parser.add_argument('mode', default='scRNA', help='scRNA or snRNA')
+parser.add_argument('exp_type', help='AEExperimentType')
 args = parser.parse_args() 
 
 alevin_out=args.alevin_fry_quant
 mtx_out=args.mtx_out
 cell_prefix=args.cell_prefix
-mode=args.mode
+exp_type=args.exp_type
 
 # Run some checks in the Alevin output
 
 if not os.path.isdir(alevin_out):
     print("{} is not a directory".format( alevin_out ))
     sys.exit(1)
+    
+#set exp_type to format that pyroe.load_fry can understand
+if exp_type == "RNA-seq of coding RNA from single cells":
+    format = "scRNA"
+elif exp_type == "single nucleus RNA sequencing":
+    format = "snRNA"
+else:
+    print("{} is not an allowed AEExperimentType for droplet scxa".format( exp_type ))
+    sys.exit(1)
+ 
 
 # Read mtx from alevin_fry_quant 
-# mode is either snRNA or scRNA and decides if reads mapping to unspliced transcripts are quantified
+# format is either snRNA or scRNA and decides if reads mapping to unspliced transcripts are quantified
 # returns anndata 
-ad = pyroe.load_fry(alevin_out, output_format=mode)
+ad = pyroe.load_fry(alevin_out, output_format=format )
 
 cb_names = [cell_prefix + s for s in ad.obs_names]
 gene_names = ad.var_names
