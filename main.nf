@@ -6,7 +6,7 @@ referenceFasta = params.referenceFasta
 transcriptToGene = params.transcriptToGene
 transcriptomeIndex = params.transcriptomeIndex
 protocol = params.protocol
-mode = params.mode
+experimentType = params.experimentType
 
 manualDownloadFolder =''
 if ( params.containsKey('manualDownloadFolder')){
@@ -278,7 +278,7 @@ process alevin_to_mtx {
         set val(runId), file("counts_mtx") into ALEVIN_MTX
 
     """
-    alevinFryMtxTo10x.py --cell_prefix ${runId}- $alevinResult counts_mtx  ${params.mode}
+    alevinFryMtxTo10x.py --cell_prefix ${runId}- $alevinResult counts_mtx  ${params.experimentType}
     """ 
 }
 
