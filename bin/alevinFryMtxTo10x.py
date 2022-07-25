@@ -39,10 +39,10 @@ if not os.path.isdir(alevin_out):
     print("{} is not a directory".format( alevin_out ))
     sys.exit(1)
     
-#set exp_type to format that pyroe.load_fry can understand
-if exp_type == "RNA-seq of coding RNA from single cells":
+# set exp_type to format that pyroe.load_fry can understand
+if exp_type == "single_cell":
     format = "scRNA"
-elif exp_type == "single nucleus RNA sequencing":
+elif exp_type == "single_nucleus":
     format = "snRNA"
 else:
     print("{} is not an allowed AEExperimentType for droplet scxa".format( exp_type ))
