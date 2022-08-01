@@ -1,4 +1,4 @@
 name: alevin-fry
 dependencies:
-  - salmon=1.8
+  - salmon=1.7.0
   - alevin-fry
