@@ -215,6 +215,7 @@ process alevin {
 
     output:
         set val(runId), file("${runId}_ALEVIN_fry_quant") into ALEVIN_RESULTS
+        set val(runId), file("${runId}_ALEVIN_fry_map/aux_info/meta_info.json") into ALEVIN_STATS
 
     
     """
@@ -371,6 +372,7 @@ ALEVIN_RESULTS_FOR_OUTPUT
     .join(ALEVIN_MTX_FOR_OUTPUT)
     .join(NONEMPTY_MTX)
     .join(ALEVIN_QC_PLOTS)
+    .join(ALEVIN_STATS)
     .set{ COMPILED_RESULTS }
 
 process compile_results{
@@ -378,7 +380,7 @@ process compile_results{
     publishDir "$resultsRoot/alevin", mode: 'copy', overwrite: true
     
     input:
-        set val(runId), file('raw_alevin'), file(countsMtx), file(countsMtxNonempty), file(qcPlot) from COMPILED_RESULTS
+        set val(runId), file('raw_alevin'), file(countsMtx), file(countsMtxNonempty), file(qcPlot), file(stats_file) from COMPILED_RESULTS
 
     output:
         set val(runId), file("$runId") into RESULTS_FOR_COUNTING
@@ -389,6 +391,7 @@ process compile_results{
         mkdir -p raw_alevin/alevin/qc
         cp -P $qcPlot raw_alevin/alevin/qc
         cp -P raw_alevin $runId
+        cp stats_file $runId
     """
 }
 
