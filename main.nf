@@ -391,7 +391,7 @@ process compile_results{
         mkdir -p raw_alevin/alevin/qc
         cp -P $qcPlot raw_alevin/alevin/qc
         cp -P raw_alevin $runId
-        cp stats_file $runId
+        cp $stats_file $runId
     """
 }
 
