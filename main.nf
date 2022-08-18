@@ -266,7 +266,7 @@ ALEVIN_RESULTS
 
 process alevin_to_mtx {
 
-    conda "${baseDir}/envs/parse_alevin.yml"
+    conda "${baseDir}/envs/parse_alevin_fry.yml"
     
     memory { 10.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
