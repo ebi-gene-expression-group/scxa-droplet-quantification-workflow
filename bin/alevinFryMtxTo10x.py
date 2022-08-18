@@ -33,7 +33,7 @@ mtx_out=args.mtx_out
 cell_prefix=args.cell_prefix
 exp_type=args.exp_type
 
-# Run some checks in the Alevin output
+# Run some checks in the Alevin-fry output
 
 if not os.path.isdir(alevin_out):
     print("{} is not a directory".format( alevin_out ))
