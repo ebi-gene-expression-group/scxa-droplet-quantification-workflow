@@ -236,8 +236,8 @@ process alevin {
         alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d fw --output-dir ${runId}_ALEVIN_fry_quant_tmp  --force-cells 100000 --min-reads 10
     fi
 
-    alevin-fry collate -i ${runId}_ALEVIN_fry_quant_tmp -r ${runId}_ALEVIN_fry_map -t 16
-    alevin-fry quant -i ${runId}_ALEVIN_fry_quant_tmp -m ${transcriptToGene} -t 16 -r cr-like-em -o ${runId}_ALEVIN_fry_quant_tmp --use-mtx
+    alevin-fry collate -i ${runId}_ALEVIN_fry_quant_tmp -r ${runId}_ALEVIN_fry_map
+    alevin-fry quant -i ${runId}_ALEVIN_fry_quant_tmp -m ${transcriptToGene} -r cr-like-em -o ${runId}_ALEVIN_fry_quant_tmp --use-mtx
 
     TOTAL=\$(grep "num_processed" ${runId}_ALEVIN_fry_map/aux_info/meta_info.json |  awk '{split(\$0, array, ": "); print array[2]}'| sed 's/,//g')
     MAPPED=\$(grep "num_mapped" ${runId}_ALEVIN_fry_map/aux_info/meta_info.json |  awk '{split(\$0, array, ": "); print array[2]}'| sed 's/,//g')
