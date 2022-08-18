@@ -28,15 +28,15 @@ parser.add_argument('--cell_prefix', dest='cell_prefix', default='', help = 'Pre
 parser.add_argument('exp_type', help='AEExperimentType')
 args = parser.parse_args() 
 
-alevin_out=args.alevin_fry_quant
+alevin_fry_quant=args.alevin_fry_quant
 mtx_out=args.mtx_out
 cell_prefix=args.cell_prefix
 exp_type=args.exp_type
 
 # Run some checks in the Alevin-fry output
 
-if not os.path.isdir(alevin_out):
-    print("{} is not a directory".format( alevin_out ))
+if not os.path.isdir(alevin_fry_quant):
+    print("{} is not a directory".format( alevin_fry_quant ))
     sys.exit(1)
     
 # set exp_type to format that pyroe.load_fry can understand
@@ -52,7 +52,7 @@ else:
 # Read mtx from alevin_fry_quant 
 # format is either snRNA or scRNA and decides if reads mapping to unspliced transcripts are quantified
 # returns anndata 
-ad = pyroe.load_fry(alevin_out, output_format=format )
+ad = pyroe.load_fry(alevin_fry_quant, output_format=format )
 
 cb_names = [cell_prefix + s for s in ad.obs_names]
 gene_names = ad.var_names
