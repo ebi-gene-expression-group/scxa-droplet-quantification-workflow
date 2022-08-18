@@ -252,7 +252,7 @@ process alevin {
 
     """
 
-        }
+}
 
 ALEVIN_RESULTS
     .into{
