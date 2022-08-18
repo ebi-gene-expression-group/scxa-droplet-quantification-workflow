@@ -6,7 +6,7 @@ suppressPackageStartupMessages(require(gridExtra))
 suppressPackageStartupMessages(require(DropletUtils))
 suppressPackageStartupMessages(require(Matrix))
 
-#script obtained from https://github.com/ebi-gene-expression-group/scxa-plots/blob/master/dropletBarcodePlot.R
+# script obtained from https://github.com/ebi-gene-expression-group/scxa-plots/blob/master/dropletBarcodePlot.R
 
 die <- function(message){
   write(message, stderr())
