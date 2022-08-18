@@ -163,6 +163,3 @@ plots <- list(
 png(width = 1000, height = 600, file=opt$output_plot)
 grid.arrange(plots$dropletutils, plots$roryk, nrow=1)
 dev.off()
-
-# Return calculated thresholds
-write.table(data.frame(dropletutils_knee = dropletutils_knee, dropletutils_inflection = dropletutils_inflection, roryk=roryk_count_cutoff), file = opt$output_thresholds, row.names = FALSE, quote = FALSE)
