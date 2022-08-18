@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Read the results of Alevin and write outputs to a .mtx file readable by tools
+# Read the results of Alevin-fry and write outputs to a .mtx file readable by tools
 # expecting 10X outputs. Adapted from 
 # https://github.com/ebi-gene-expression-group/scxa-droplet-quantification-workflow/blob/develop/bin/alevinMtxTo10x.py
 # which is adapted from 
