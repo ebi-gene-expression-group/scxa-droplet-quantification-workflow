@@ -66,7 +66,7 @@ process download_fastqs {
         if ! [ -z "$ATLAS_TMPDIR" ]; then 
             TMPDIR=$ATLAS_TMPDIR; 
         else 
-                echo "NOTE: ATLAS_TMPDIR not defined"
+            echo "NOTE: ATLAS_TMPDIR not defined"
         fi
         if [ -n "$manualDownloadFolder" ] && [ -e $manualDownloadFolder/${cdnaFastqFile} ] && [ -e $manualDownloadFolder/${barcodesFastqFile} ]; then
            ln -s $manualDownloadFolder/${cdnaFastqFile} ${cdnaFastqFile}
