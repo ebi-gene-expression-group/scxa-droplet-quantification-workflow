@@ -63,6 +63,11 @@ process download_fastqs {
         set val(runId), file("${cdnaFastqFile}"), file("${barcodesFastqFile}"), val(barcodeLength), val(umiLength), val(end), val(cellCount) into DOWNLOADED_FASTQS
 
     """
+        if ! [ -z "$ATLAS_TMPDIR" ]; then 
+            TMPDIR=$ATLAS_TMPDIR; 
+        else 
+            echo "NOTE: ATLAS_TMPDIR not defined"
+        fi
         if [ -n "$manualDownloadFolder" ] && [ -e $manualDownloadFolder/${cdnaFastqFile} ] && [ -e $manualDownloadFolder/${barcodesFastqFile} ]; then
            ln -s $manualDownloadFolder/${cdnaFastqFile} ${cdnaFastqFile}
            ln -s $manualDownloadFolder/${barcodesFastqFile} ${barcodesFastqFile}
