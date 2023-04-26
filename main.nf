@@ -6,6 +6,7 @@ referenceFasta = params.referenceFasta
 transcriptToGene = params.transcriptToGene
 transcriptomeIndex = params.transcriptomeIndex
 protocol = params.protocol
+experimentType = params.experimentType
 
 manualDownloadFolder =''
 if ( params.containsKey('manualDownloadFolder')){
@@ -199,10 +200,11 @@ process alevin_config {
 }
 
 // Run Alevin per row
+// Implement alevin_fry
 
 process alevin {
 
-    conda "${baseDir}/envs/alevin.yml"
+    conda "${baseDir}/envs/alevin_fry.yml"
     
     cache 'deep'
 
@@ -217,21 +219,44 @@ process alevin {
         file(transcriptToGene) from TRANSCRIPT_TO_GENE
 
     output:
-        set val(runId), file("${runId}"),  file("${runId}/alevin/raw_cb_frequency.txt") into ALEVIN_RESULTS
+        set val(runId), file("${runId}_ALEVIN_fry_quant") into ALEVIN_RESULTS
+        set val(runId), file("${runId}_ALEVIN_fry_map/aux_info/meta_info.json") into ALEVIN_STATS
 
+    
     """
-    salmon alevin ${barcodeConfig} -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-        -i ${transcriptomeIndex} -p ${task.cpus} -o ${runId}_tmp --tgMap ${transcriptToGene} --dumpFeatures --keepCBFraction 1 \
-        --freqThreshold ${params.minCbFreq} --dumpMtx
+    
+    salmon alevin ${barcodeConfig} --sketch -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
+        -i ${transcriptomeIndex} -p ${task.cpus} -o ${runId}_ALEVIN_fry_map 
 
-    min_mapping=\$(grep "percent_mapped" ${runId}_tmp/aux_info/meta_info.json | sed 's/,//g' | awk -F': ' '{print \$2}' | sort -n | head -n 1)   
+    if [ "${params.protocol}" = "10xv2" ]
+    then
+        alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d fw --unfiltered-pl ${baseDir}/whitelist/737K-august-2016.txt --output-dir ${runId}_ALEVIN_fry_quant_tmp --min-reads 10
+    elif [ "${params.protocol}" = "10xv3" ]
+    then
+        alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d fw --unfiltered-pl ${baseDir}/whitelist/3M-february-2018_onecollum.txt --output-dir ${runId}_ALEVIN_fry_quant_tmp --min-reads 10
+    elif [ "${params.protocol}" = "10x5prime" ]
+    then
+        alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d rc  --output-dir ${runId}_ALEVIN_fry_quant_tmp --force-cells 100000 --min-reads 10
+    else
+        alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d fw --output-dir ${runId}_ALEVIN_fry_quant_tmp  --force-cells 100000 --min-reads 10
+    fi
+
+    alevin-fry collate -i ${runId}_ALEVIN_fry_quant_tmp -r ${runId}_ALEVIN_fry_map
+    alevin-fry quant -i ${runId}_ALEVIN_fry_quant_tmp -m ${transcriptToGene} -r cr-like-em -o ${runId}_ALEVIN_fry_quant_tmp --use-mtx
+
+    TOTAL=\$(grep "num_processed" ${runId}_ALEVIN_fry_map/aux_info/meta_info.json |  awk '{split(\$0, array, ": "); print array[2]}'| sed 's/,//g')
+    MAPPED=\$(grep "num_mapped" ${runId}_ALEVIN_fry_map/aux_info/meta_info.json |  awk '{split(\$0, array, ": "); print array[2]}'| sed 's/,//g')
+    min_mapping=\$(echo "scale=2;((\$MAPPED * 100) / \$TOTAL)"|bc)
+
     if [ "\${min_mapping%.*}" -lt "${params.minMappingRate}" ]; then
         echo "Minimum mapping rate (\$min_mapping) is less than the specified threshold of ${params.minMappingRate}" 1>&2
         exit 1 
     fi
- 
-    mv ${runId}_tmp ${runId}
+
+    mv ${runId}_ALEVIN_fry_quant_tmp ${runId}_ALEVIN_fry_quant
+
     """
+
 }
 
 ALEVIN_RESULTS
@@ -246,20 +271,20 @@ ALEVIN_RESULTS
 
 process alevin_to_mtx {
 
-    conda "${baseDir}/envs/parse_alevin.yml"
+    conda "${baseDir}/envs/parse_alevin_fry.yml"
     
     memory { 10.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
     maxRetries 20
 
     input:
-        set val(runId), file(alevinResult), file(rawBarcodeFreq) from ALEVIN_RESULTS_FOR_PROCESSING
+        set val(runId), file(alevinResult) from ALEVIN_RESULTS_FOR_PROCESSING
 
     output:
         set val(runId), file("counts_mtx") into ALEVIN_MTX
 
     """
-    alevinMtxTo10x.py --cell_prefix ${runId}- $alevinResult counts_mtx
+    alevinFryMtxTo10x.py --cell_prefix ${runId}- $alevinResult counts_mtx  ${params.experimentType}
     """ 
 }
 
@@ -280,20 +305,20 @@ ALEVIN_RESULTS_FOR_QC
 
 process droplet_qc_plot{
     
-    conda "${baseDir}/envs/alevin.yml"
+    conda "${baseDir}/envs/droplet-barcode.yml"
     
     memory { 10.GB * task.attempt }
     errorStrategy { task.exitStatus == 130 || task.exitStatus == 137 ? 'retry' : 'finish' }
     maxRetries 20
 
     input:
-        set val(runId), file(alevinResult), file(rawBarcodeFreq), file(mtx) from ALEVIN_QC_INPUTS
+        set val(runId), file(alevinResult), file(mtx) from ALEVIN_QC_INPUTS
 
     output:
         set val(runId), file("${runId}.png") into ALEVIN_QC_PLOTS
 
     """
-    dropletBarcodePlot.R $rawBarcodeFreq $mtx $runId ${runId}.png
+    dropletBarcodePlot.R --mtx-matrix counts_mtx/matrix.mtx --label $runId --output-plot ${runId}.png
     """ 
 }
 
@@ -352,6 +377,7 @@ ALEVIN_RESULTS_FOR_OUTPUT
     .join(ALEVIN_MTX_FOR_OUTPUT)
     .join(NONEMPTY_MTX)
     .join(ALEVIN_QC_PLOTS)
+    .join(ALEVIN_STATS)
     .set{ COMPILED_RESULTS }
 
 process compile_results{
@@ -359,7 +385,7 @@ process compile_results{
     publishDir "$resultsRoot/alevin", mode: 'copy', overwrite: true
     
     input:
-        set val(runId), file('raw_alevin'), file(rawBarcodeFreq), file(countsMtx), file(countsMtxNonempty), file(qcPlot) from COMPILED_RESULTS
+        set val(runId), file('raw_alevin'), file(countsMtx), file(countsMtxNonempty), file(qcPlot), file(stats_file) from COMPILED_RESULTS
 
     output:
         set val(runId), file("$runId") into RESULTS_FOR_COUNTING
@@ -370,6 +396,7 @@ process compile_results{
         mkdir -p raw_alevin/alevin/qc
         cp -P $qcPlot raw_alevin/alevin/qc
         cp -P raw_alevin $runId
+        cp $stats_file $runId
     """
 }
 
