@@ -24,7 +24,8 @@ The workflow requires as input:
  - A Nextflow configuration file describing the data in the tabular samples table
  - A string specifying whether the experiment is snRNA or scRNA
  - An output directory for results
- - A whitelist for 10XV2 and 10XV3 to filter barcodes. (__Note__: The 10XV3 whitelist needs to be downladed [here](https://raw.githubusercontent.com/10XGenomics/cellranger/master/lib/python/cellranger/barcodes/translation/3M-february-2018.txt.gz) and placed here `w_droplet_quantification/whitelist/3M-february-2018_onecollum.txt`)  
+ - A whitelist for 10XV2 and 10XV3 to filter barcodes. (__Note__: The 10XV3 whitelist needs to be downladed [here](https://raw.githubusercontent.com/10XGenomics/cellranger/master/lib/python/cellranger/barcodes/translation/3M-february-2018.txt.gz), and download location needs to be updated in the `nextflow.config` file under `params.10xv3.whitelist`.)
+ NOTE: The download link no longer works; the whitelist file comes with CellRanger.
 
 ### Transcript to gene map
 

@@ -233,7 +233,7 @@ process alevin {
         alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d fw --unfiltered-pl ${baseDir}/whitelist/737K-august-2016.txt --output-dir ${runId}_ALEVIN_fry_quant_tmp --min-reads 10
     elif [ "${params.protocol}" = "10xv3" ]
     then
-        alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d fw --unfiltered-pl ${baseDir}/whitelist/3M-february-2018_onecollum.txt --output-dir ${runId}_ALEVIN_fry_quant_tmp --min-reads 10
+        alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d fw --unfiltered-pl ${params.10xv3.whitelist} --output-dir ${runId}_ALEVIN_fry_quant_tmp --min-reads 10
     elif [ "${params.protocol}" = "10x5prime" ]
     then
         alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d rc  --output-dir ${runId}_ALEVIN_fry_quant_tmp --force-cells 100000 --min-reads 10
