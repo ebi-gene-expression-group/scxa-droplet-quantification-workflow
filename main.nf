@@ -222,40 +222,44 @@ process alevin {
         set val(runId), file("${runId}_ALEVIN_fry_quant") into ALEVIN_RESULTS
         set val(runId), file("${runId}_ALEVIN_fry_map/aux_info/meta_info.json") into ALEVIN_STATS
 
-    
-    """
-    
-    salmon alevin ${barcodeConfig} --sketch -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-        -i ${transcriptomeIndex} -p ${task.cpus} -o ${runId}_ALEVIN_fry_map 
+    script:
 
-    if [ "${params.protocol}" = "10xv2" ]
-    then
-        alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d fw --unfiltered-pl ${baseDir}/whitelist/737K-august-2016.txt --output-dir ${runId}_ALEVIN_fry_quant_tmp --min-reads 10
-    elif [ "${params.protocol}" = "10xv3" ]
-    then
-        alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d fw --unfiltered-pl ${params.10xv3.whitelist} --output-dir ${runId}_ALEVIN_fry_quant_tmp --min-reads 10
-    elif [ "${params.protocol}" = "10x5prime" ]
-    then
-        alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d rc  --output-dir ${runId}_ALEVIN_fry_quant_tmp --force-cells 100000 --min-reads 10
-    else
-        alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d fw --output-dir ${runId}_ALEVIN_fry_quant_tmp  --force-cells 100000 --min-reads 10
-    fi
+        canonicalProtocol = params.get(protocol)
+        whitelist = canonicalProtocol.whitelist
 
-    alevin-fry collate -i ${runId}_ALEVIN_fry_quant_tmp -r ${runId}_ALEVIN_fry_map
-    alevin-fry quant -i ${runId}_ALEVIN_fry_quant_tmp -m ${transcriptToGene} -r cr-like-em -o ${runId}_ALEVIN_fry_quant_tmp --use-mtx
+        """
+        
+        salmon alevin ${barcodeConfig} --sketch -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
+            -i ${transcriptomeIndex} -p ${task.cpus} -o ${runId}_ALEVIN_fry_map 
 
-    TOTAL=\$(grep "num_processed" ${runId}_ALEVIN_fry_map/aux_info/meta_info.json |  awk '{split(\$0, array, ": "); print array[2]}'| sed 's/,//g')
-    MAPPED=\$(grep "num_mapped" ${runId}_ALEVIN_fry_map/aux_info/meta_info.json |  awk '{split(\$0, array, ": "); print array[2]}'| sed 's/,//g')
-    min_mapping=\$(echo "scale=2;((\$MAPPED * 100) / \$TOTAL)"|bc)
+        if [ "${params.protocol}" = "10xv2" ]
+        then
+            alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d fw --unfiltered-pl ${baseDir}/whitelist/737K-august-2016.txt --output-dir ${runId}_ALEVIN_fry_quant_tmp --min-reads 10
+        elif [ "${params.protocol}" = "10xv3" ]
+        then
+            alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d fw --unfiltered-pl ${whitelist} --output-dir ${runId}_ALEVIN_fry_quant_tmp --min-reads 10
+        elif [ "${params.protocol}" = "10x5prime" ]
+        then
+            alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d rc  --output-dir ${runId}_ALEVIN_fry_quant_tmp --force-cells 100000 --min-reads 10
+        else
+            alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d fw --output-dir ${runId}_ALEVIN_fry_quant_tmp  --force-cells 100000 --min-reads 10
+        fi
 
-    if [ "\${min_mapping%.*}" -lt "${params.minMappingRate}" ]; then
-        echo "Minimum mapping rate (\$min_mapping) is less than the specified threshold of ${params.minMappingRate}" 1>&2
-        exit 1 
-    fi
+        alevin-fry collate -i ${runId}_ALEVIN_fry_quant_tmp -r ${runId}_ALEVIN_fry_map
+        alevin-fry quant -i ${runId}_ALEVIN_fry_quant_tmp -m ${transcriptToGene} -r cr-like-em -o ${runId}_ALEVIN_fry_quant_tmp --use-mtx
 
-    mv ${runId}_ALEVIN_fry_quant_tmp ${runId}_ALEVIN_fry_quant
+        TOTAL=\$(grep "num_processed" ${runId}_ALEVIN_fry_map/aux_info/meta_info.json |  awk '{split(\$0, array, ": "); print array[2]}'| sed 's/,//g')
+        MAPPED=\$(grep "num_mapped" ${runId}_ALEVIN_fry_map/aux_info/meta_info.json |  awk '{split(\$0, array, ": "); print array[2]}'| sed 's/,//g')
+        min_mapping=\$(echo "scale=2;((\$MAPPED * 100) / \$TOTAL)"|bc)
 
-    """
+        if [ "\${min_mapping%.*}" -lt "${params.minMappingRate}" ]; then
+            echo "Minimum mapping rate (\$min_mapping) is less than the specified threshold of ${params.minMappingRate}" 1>&2
+            exit 1 
+        fi
+
+        mv ${runId}_ALEVIN_fry_quant_tmp ${runId}_ALEVIN_fry_quant
+
+        """
 
 }
 
