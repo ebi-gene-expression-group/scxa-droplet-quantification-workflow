@@ -1,5 +1,7 @@
 #!/usr/bin/env nextflow
 
+WorkflowParamValidator.validate(params)
+
 sdrfFile = params.sdrf
 resultsRoot = params.resultsRoot
 referenceFasta = params.referenceFasta
@@ -7,42 +9,6 @@ transcriptToGene = params.transcriptToGene
 transcriptomeIndex = params.transcriptomeIndex
 protocol = params.protocol
 experimentType = params.experimentType
-
-def safeToken(value, fieldName) {
-    def text = value == null ? '' : value.toString()
-    if (!(text ==~ /[A-Za-z0-9][A-Za-z0-9._+-]*/)) {
-        throw new IllegalArgumentException("Unsafe SDRF value for ${fieldName}: '${text}'")
-    }
-    text
-}
-
-def safeInteger(value, fieldName) {
-    def text = value == null ? '' : value.toString()
-    if (!(text ==~ /[0-9]+/)) {
-        throw new IllegalArgumentException("Unsafe SDRF numeric value for ${fieldName}: '${text}'")
-    }
-    text
-}
-
-def safeUri(value, fieldName) {
-    def text = value == null ? '' : value.toString()
-    if (!(text ==~ /[^\p{Cntrl}\s]+/)) {
-        throw new IllegalArgumentException("Unsafe SDRF URI value for ${fieldName}: '${text}'")
-    }
-    text
-}
-
-def safeControlledAccess(value) {
-    def text = value == null ? 'no' : value.toString().toLowerCase()
-    if (!(text in ['yes', 'no'])) {
-        throw new IllegalArgumentException("Unsafe SDRF controlled access value: '${value}'")
-    }
-    text
-}
-
-def shellQuote(value) {
-    "'" + value.toString().replace("'", "'\"'\"'") + "'"
-}
 
 manualDownloadFolder =''
 if ( params.containsKey('manualDownloadFolder')){
@@ -75,20 +41,20 @@ SDRF_FOR_FASTQS
     .map{ row-> 
       controlled_access = 'no'
       if (  params.fields.containsKey('controlled_access')){
-        controlled_access = safeControlledAccess(row["${params.fields.controlled_access}"])
+        controlled_access = WorkflowParamValidator.safeControlledAccess(row["${params.fields.controlled_access}"])
       }
-      def cdna_uri = safeUri(row["${params.fields.cdna_uri}"], params.fields.cdna_uri)
-      def cell_barcode_uri = safeUri(row["${params.fields.cell_barcode_uri}"], params.fields.cell_barcode_uri)
+      def cdna_uri = WorkflowParamValidator.safeUri(row["${params.fields.cdna_uri}"], params.fields.cdna_uri)
+      def cell_barcode_uri = WorkflowParamValidator.safeUri(row["${params.fields.cell_barcode_uri}"], params.fields.cell_barcode_uri)
       tuple(
-        safeToken(row["${params.fields.run}"], params.fields.run),
+        WorkflowParamValidator.safeToken(row["${params.fields.run}"], params.fields.run),
         cdna_uri,
         cell_barcode_uri,
-        safeToken(file(cdna_uri).getName(), "${params.fields.cdna_uri} basename"),
-        safeToken(file(cell_barcode_uri).getName(), "${params.fields.cell_barcode_uri} basename"),
-        safeInteger(row["${params.fields.cell_barcode_size}"], params.fields.cell_barcode_size),
-        safeInteger(row["${params.fields.umi_barcode_size}"], params.fields.umi_barcode_size),
-        safeInteger(row["${params.fields.end}"], params.fields.end),
-        safeInteger(row["${params.fields.cell_count}"], params.fields.cell_count),
+        WorkflowParamValidator.safeToken(file(cdna_uri).getName(), "${params.fields.cdna_uri} basename"),
+        WorkflowParamValidator.safeToken(file(cell_barcode_uri).getName(), "${params.fields.cell_barcode_uri} basename"),
+        WorkflowParamValidator.safeInteger(row["${params.fields.cell_barcode_size}"], params.fields.cell_barcode_size),
+        WorkflowParamValidator.safeInteger(row["${params.fields.umi_barcode_size}"], params.fields.umi_barcode_size),
+        WorkflowParamValidator.safeInteger(row["${params.fields.end}"], params.fields.end),
+        WorkflowParamValidator.safeInteger(row["${params.fields.cell_count}"], params.fields.cell_count),
         controlled_access
       )
     }    
@@ -139,12 +105,12 @@ process download_fastqs {
             # Stop fastq downloader from testing different methods -assume the control workflow has done that 
             export NOPROBE=1
         
-            fetchFastq.sh -f ${shellQuote(cdnaFastqURI)} -t ${shellQuote(cdnaFastqFile)} -m ${params.downloadMethod} \$confPart
+            fetchFastq.sh -f ${WorkflowParamValidator.shellQuote(cdnaFastqURI)} -t ${WorkflowParamValidator.shellQuote(cdnaFastqFile)} -m ${params.downloadMethod} \$confPart
             
             # Allow for the first download also having produced the second output already
 
-            if [ ! -e ${shellQuote(barcodesFastqFile)} ]; then
-                fetchFastq.sh -f ${shellQuote(barcodesFastqURI)} -t ${shellQuote(barcodesFastqFile)} -m ${params.downloadMethod} \$confPart
+            if [ ! -e ${WorkflowParamValidator.shellQuote(barcodesFastqFile)} ]; then
+                fetchFastq.sh -f ${WorkflowParamValidator.shellQuote(barcodesFastqURI)} -t ${WorkflowParamValidator.shellQuote(barcodesFastqFile)} -m ${params.downloadMethod} \$confPart
             fi
         fi
     """
@@ -157,7 +123,7 @@ if ( params.fields.containsKey('techrep')){
     // If technical replicates are present, create a channel containing that info 
 
     SDRF_FOR_TECHREP
-        .map{ row-> tuple(safeToken(row["${params.fields.run}"], params.fields.run), safeToken(row["${params.fields.techrep}"], params.fields.techrep)) }
+        .map{ row-> tuple(WorkflowParamValidator.safeToken(row["${params.fields.run}"], params.fields.run), WorkflowParamValidator.safeToken(row["${params.fields.techrep}"], params.fields.techrep)) }
         .groupTuple()
         .map{ row-> tuple( row[0], row[1][0]) }
         .set{ TECHREPS }
