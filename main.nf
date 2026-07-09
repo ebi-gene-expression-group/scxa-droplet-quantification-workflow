@@ -43,8 +43,8 @@ SDRF_FOR_FASTQS
       if (  params.fields.containsKey('controlled_access')){
         controlled_access = WorkflowParamValidator.safeControlledAccess(row["${params.fields.controlled_access}"])
       }
-      def cdna_uri = WorkflowParamValidator.safeUri(row["${params.fields.cdna_uri}"], params.fields.cdna_uri)
-      def cell_barcode_uri = WorkflowParamValidator.safeUri(row["${params.fields.cell_barcode_uri}"], params.fields.cell_barcode_uri)
+      def cdna_uri = WorkflowParamValidator.safeUri(row["${params.fields.cdna_uri}"], params.fields.cdna_uri, controlled_access)
+      def cell_barcode_uri = WorkflowParamValidator.safeUri(row["${params.fields.cell_barcode_uri}"], params.fields.cell_barcode_uri, controlled_access)
       tuple(
         WorkflowParamValidator.safeToken(row["${params.fields.run}"], params.fields.run),
         cdna_uri,
