@@ -1,5 +1,7 @@
 #!/usr/bin/env nextflow
 
+WorkflowParamValidator.validate(params)
+
 sdrfFile = params.sdrf
 resultsRoot = params.resultsRoot
 referenceFasta = params.referenceFasta
@@ -37,11 +39,24 @@ TRANSCRIPT_TO_GENE = Channel.fromPath( transcriptToGene, checkIfExists: true ).f
 
 SDRF_FOR_FASTQS
     .map{ row-> 
-      controlled_access='no'
+      controlled_access = 'no'
       if (  params.fields.containsKey('controlled_access')){
-        controlled_access=row["${params.fields.controlled_access}"]
+        controlled_access = WorkflowParamValidator.safeControlledAccess(row["${params.fields.controlled_access}"])
       }
-      tuple(row["${params.fields.run}"], row["${params.fields.cdna_uri}"], row["${params.fields.cell_barcode_uri}"], file(row["${params.fields.cdna_uri}"]).getName(), file(row["${params.fields.cell_barcode_uri}"]).getName(), row["${params.fields.cell_barcode_size}"], row["${params.fields.umi_barcode_size}"], row["${params.fields.end}"], row["${params.fields.cell_count}"], controlled_access) 
+      def cdna_uri = WorkflowParamValidator.safeUri(row["${params.fields.cdna_uri}"], params.fields.cdna_uri, controlled_access)
+      def cell_barcode_uri = WorkflowParamValidator.safeUri(row["${params.fields.cell_barcode_uri}"], params.fields.cell_barcode_uri, controlled_access)
+      tuple(
+        WorkflowParamValidator.safeToken(row["${params.fields.run}"], params.fields.run),
+        cdna_uri,
+        cell_barcode_uri,
+        WorkflowParamValidator.safeToken(file(cdna_uri).getName(), "${params.fields.cdna_uri} basename"),
+        WorkflowParamValidator.safeToken(file(cell_barcode_uri).getName(), "${params.fields.cell_barcode_uri} basename"),
+        WorkflowParamValidator.safeInteger(row["${params.fields.cell_barcode_size}"], params.fields.cell_barcode_size),
+        WorkflowParamValidator.safeInteger(row["${params.fields.umi_barcode_size}"], params.fields.umi_barcode_size),
+        WorkflowParamValidator.safeInteger(row["${params.fields.end}"], params.fields.end),
+        WorkflowParamValidator.safeInteger(row["${params.fields.cell_count}"], params.fields.cell_count),
+        controlled_access
+      )
     }    
     .set { FASTQ_RUNS }
 
@@ -64,38 +79,45 @@ process download_fastqs {
         set val(runId), file("${cdnaFastqFile}"), file("${barcodesFastqFile}"), val(barcodeLength), val(umiLength), val(end), val(cellCount) into DOWNLOADED_FASTQS
 
     """
+        DOWNLOAD_METHOD=${WorkflowParamValidator.shellQuote(params.downloadMethod)}
+        MANUAL_DOWNLOAD_FOLDER=${WorkflowParamValidator.shellQuote(manualDownloadFolder)}
+        FASTQ_PROVIDER_CONFIG=${WorkflowParamValidator.shellQuote(fastqProviderConfig)}
+        CDNA_FASTQ_FILE=${WorkflowParamValidator.shellQuote(cdnaFastqFile)}
+        BARCODES_FASTQ_FILE=${WorkflowParamValidator.shellQuote(barcodesFastqFile)}
+        CONTROLLED_ACCESS=${WorkflowParamValidator.shellQuote(controlledAccess)}
+
         if ! [ -z "$ATLAS_TMPDIR" ]; then 
             TMPDIR=$ATLAS_TMPDIR; 
         else 
             echo "NOTE: ATLAS_TMPDIR not defined"
         fi
-        if [ -n "$manualDownloadFolder" ] && [ -e $manualDownloadFolder/${cdnaFastqFile} ] && [ -e $manualDownloadFolder/${barcodesFastqFile} ]; then
-           ln -s $manualDownloadFolder/${cdnaFastqFile} ${cdnaFastqFile}
-           ln -s $manualDownloadFolder/${barcodesFastqFile} ${barcodesFastqFile}
-        elif [ -n "$manualDownloadFolder" ] && [ -e $manualDownloadFolder/${cdnaFastqFile} ] && [ ! -e $manualDownloadFolder/${barcodesFastqFile} ]; then
-            echo 'cDNA file $cdnaFastqFile is available locally, but barcodes file $barcodesFastqFile is not 1>&2
+        if [ -n "\$MANUAL_DOWNLOAD_FOLDER" ] && [ -e "\$MANUAL_DOWNLOAD_FOLDER/\$CDNA_FASTQ_FILE" ] && [ -e "\$MANUAL_DOWNLOAD_FOLDER/\$BARCODES_FASTQ_FILE" ]; then
+           ln -s "\$MANUAL_DOWNLOAD_FOLDER/\$CDNA_FASTQ_FILE" "\$CDNA_FASTQ_FILE"
+           ln -s "\$MANUAL_DOWNLOAD_FOLDER/\$BARCODES_FASTQ_FILE" "\$BARCODES_FASTQ_FILE"
+        elif [ -n "\$MANUAL_DOWNLOAD_FOLDER" ] && [ -e "\$MANUAL_DOWNLOAD_FOLDER/\$CDNA_FASTQ_FILE" ] && [ ! -e "\$MANUAL_DOWNLOAD_FOLDER/\$BARCODES_FASTQ_FILE" ]; then
+            echo "cDNA file \$CDNA_FASTQ_FILE is available locally, but barcodes file \$BARCODES_FASTQ_FILE is not" 1>&2
             exit 2    
-        elif [ -n "$manualDownloadFolder" ] && [ ! -e $manualDownloadFolder/${cdnaFastqFile} ] && [ -e $manualDownloadFolder/${barcodesFastqFile} ]; then
-            echo 'cDNA file $cdnaFastqFile is not available locally, but barcodes file $barcodesFastqFile is 1>&2
+        elif [ -n "\$MANUAL_DOWNLOAD_FOLDER" ] && [ ! -e "\$MANUAL_DOWNLOAD_FOLDER/\$CDNA_FASTQ_FILE" ] && [ -e "\$MANUAL_DOWNLOAD_FOLDER/\$BARCODES_FASTQ_FILE" ]; then
+            echo "cDNA file \$CDNA_FASTQ_FILE is not available locally, but barcodes file \$BARCODES_FASTQ_FILE is" 1>&2
             exit 3 
-        elif [ "$controlledAccess" = 'yes' ]; then
-            echo "One or both of ${cdnaFastqFile}, ${barcodesFastqFile} are not available at $manualDownloadFolder/ for this controlled access experiment" 1>&2
+        elif [ "\$CONTROLLED_ACCESS" = 'yes' ]; then
+            echo "One or both of \$CDNA_FASTQ_FILE, \$BARCODES_FASTQ_FILE are not available at \$MANUAL_DOWNLOAD_FOLDER/ for this controlled access experiment" 1>&2
             exit 4   
         else
             confPart=''
-            if [ -n "$fastqProviderConfig" ] && [ -e "$fastqProviderConfig" ]; then
-                confPart=" -c $fastqProviderConfig"
+            if [ -n "\$FASTQ_PROVIDER_CONFIG" ] && [ -e "\$FASTQ_PROVIDER_CONFIG" ]; then
+                confPart=" -c \$FASTQ_PROVIDER_CONFIG"
             fi 
 
             # Stop fastq downloader from testing different methods -assume the control workflow has done that 
             export NOPROBE=1
         
-            fetchFastq.sh -f ${cdnaFastqURI} -t ${cdnaFastqFile} -m ${params.downloadMethod} \$confPart
+            fetchFastq.sh -f ${WorkflowParamValidator.shellQuote(cdnaFastqURI)} -t "\$CDNA_FASTQ_FILE" -m "\$DOWNLOAD_METHOD" \$confPart
             
             # Allow for the first download also having produced the second output already
 
-            if [ ! -e ${barcodesFastqFile} ]; then
-                fetchFastq.sh -f ${barcodesFastqURI} -t ${barcodesFastqFile} -m ${params.downloadMethod} \$confPart
+            if [ ! -e "\$BARCODES_FASTQ_FILE" ]; then
+                fetchFastq.sh -f ${WorkflowParamValidator.shellQuote(barcodesFastqURI)} -t "\$BARCODES_FASTQ_FILE" -m "\$DOWNLOAD_METHOD" \$confPart
             fi
         fi
     """
@@ -108,7 +130,7 @@ if ( params.fields.containsKey('techrep')){
     // If technical replicates are present, create a channel containing that info 
 
     SDRF_FOR_TECHREP
-        .map{ row-> tuple(row["${params.fields.run}"], row["${params.fields.techrep}"]) }
+        .map{ row-> tuple(WorkflowParamValidator.safeToken(row["${params.fields.run}"], params.fields.run), WorkflowParamValidator.safeToken(row["${params.fields.techrep}"], params.fields.techrep)) }
         .groupTuple()
         .map{ row-> tuple( row[0], row[1][0]) }
         .set{ TECHREPS }
@@ -226,38 +248,50 @@ process alevin {
 
         canonicalProtocol = params.get(protocol)
         whitelist = canonicalProtocol.whitelist
+        def protocolEnv = WorkflowParamValidator.shellQuote(params.protocol)
+        def transcriptomeIndexEnv = WorkflowParamValidator.shellQuote(transcriptomeIndex)
+        def transcriptToGeneEnv = WorkflowParamValidator.shellQuote(transcriptToGene)
+        def runIdEnv = WorkflowParamValidator.shellQuote(runId)
+        def whitelistEnv = WorkflowParamValidator.shellQuote(whitelist ?: '')
+        def minMappingRateEnv = WorkflowParamValidator.shellQuote(params.minMappingRate)
 
         """
+        PROTOCOL=${protocolEnv}
+        TRANSCRIPTOME_INDEX=${transcriptomeIndexEnv}
+        TRANSCRIPT_TO_GENE=${transcriptToGeneEnv}
+        RUN_ID=${runIdEnv}
+        WHITELIST=${whitelistEnv}
+        MIN_MAPPING_RATE=${minMappingRateEnv}
         
         salmon alevin ${barcodeConfig} --sketch -1 \$(ls barcodes*.fastq.gz | tr '\\n' ' ') -2 \$(ls cdna*.fastq.gz | tr '\\n' ' ') \
-            -i ${transcriptomeIndex} -p ${task.cpus} -o ${runId}_ALEVIN_fry_map 
+            -i "\$TRANSCRIPTOME_INDEX" -p ${task.cpus} -o "\${RUN_ID}_ALEVIN_fry_map"
 
-        if [ "${params.protocol}" = "10xv2" ]
+        if [ "\$PROTOCOL" = "10xv2" ]
         then
-            alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d fw --unfiltered-pl ${baseDir}/whitelist/737K-august-2016.txt --output-dir ${runId}_ALEVIN_fry_quant_tmp --min-reads 10
-        elif [ "${params.protocol}" = "10xv3" ]
+            alevin-fry generate-permit-list --input "\${RUN_ID}_ALEVIN_fry_map" -d fw --unfiltered-pl ${baseDir}/whitelist/737K-august-2016.txt --output-dir "\${RUN_ID}_ALEVIN_fry_quant_tmp" --min-reads 10
+        elif [ "\$PROTOCOL" = "10xv3" ]
         then
-            alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d fw --unfiltered-pl ${whitelist} --output-dir ${runId}_ALEVIN_fry_quant_tmp --min-reads 10
-        elif [ "${params.protocol}" = "10x5prime" ]
+            alevin-fry generate-permit-list --input "\${RUN_ID}_ALEVIN_fry_map" -d fw --unfiltered-pl "\$WHITELIST" --output-dir "\${RUN_ID}_ALEVIN_fry_quant_tmp" --min-reads 10
+        elif [ "\$PROTOCOL" = "10x5prime" ]
         then
-            alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d rc  --output-dir ${runId}_ALEVIN_fry_quant_tmp --force-cells 100000 --min-reads 10
+            alevin-fry generate-permit-list --input "\${RUN_ID}_ALEVIN_fry_map" -d rc --output-dir "\${RUN_ID}_ALEVIN_fry_quant_tmp" --force-cells 100000 --min-reads 10
         else
-            alevin-fry generate-permit-list --input ${runId}_ALEVIN_fry_map -d fw --output-dir ${runId}_ALEVIN_fry_quant_tmp  --force-cells 100000 --min-reads 10
+            alevin-fry generate-permit-list --input "\${RUN_ID}_ALEVIN_fry_map" -d fw --output-dir "\${RUN_ID}_ALEVIN_fry_quant_tmp" --force-cells 100000 --min-reads 10
         fi
 
-        alevin-fry collate -i ${runId}_ALEVIN_fry_quant_tmp -r ${runId}_ALEVIN_fry_map
-        alevin-fry quant -i ${runId}_ALEVIN_fry_quant_tmp -m ${transcriptToGene} -r cr-like-em -o ${runId}_ALEVIN_fry_quant_tmp --use-mtx
+        alevin-fry collate -i "\${RUN_ID}_ALEVIN_fry_quant_tmp" -r "\${RUN_ID}_ALEVIN_fry_map"
+        alevin-fry quant -i "\${RUN_ID}_ALEVIN_fry_quant_tmp" -m "\$TRANSCRIPT_TO_GENE" -r cr-like-em -o "\${RUN_ID}_ALEVIN_fry_quant_tmp" --use-mtx
 
-        TOTAL=\$(grep "num_processed" ${runId}_ALEVIN_fry_map/aux_info/meta_info.json |  awk '{split(\$0, array, ": "); print array[2]}'| sed 's/,//g')
-        MAPPED=\$(grep "num_mapped" ${runId}_ALEVIN_fry_map/aux_info/meta_info.json |  awk '{split(\$0, array, ": "); print array[2]}'| sed 's/,//g')
+        TOTAL=\$(grep "num_processed" "\${RUN_ID}_ALEVIN_fry_map/aux_info/meta_info.json" |  awk '{split(\$0, array, ": "); print array[2]}'| sed 's/,//g')
+        MAPPED=\$(grep "num_mapped" "\${RUN_ID}_ALEVIN_fry_map/aux_info/meta_info.json" |  awk '{split(\$0, array, ": "); print array[2]}'| sed 's/,//g')
         min_mapping=\$(echo "scale=2;((\$MAPPED * 100) / \$TOTAL)"|bc)
 
-        if [ "\${min_mapping%.*}" -lt "${params.minMappingRate}" ]; then
-            echo "Minimum mapping rate (\$min_mapping) is less than the specified threshold of ${params.minMappingRate}" 1>&2
+        if [ "\${min_mapping%.*}" -lt "\$MIN_MAPPING_RATE" ]; then
+            echo "Minimum mapping rate (\$min_mapping) is less than the specified threshold of \$MIN_MAPPING_RATE" 1>&2
             exit 1 
         fi
 
-        mv ${runId}_ALEVIN_fry_quant_tmp ${runId}_ALEVIN_fry_quant
+        mv "\${RUN_ID}_ALEVIN_fry_quant_tmp" "\${RUN_ID}_ALEVIN_fry_quant"
 
         """
 
@@ -288,7 +322,9 @@ process alevin_to_mtx {
         set val(runId), file("counts_mtx") into ALEVIN_MTX
 
     """
-    alevinFryMtxTo10x.py --cell_prefix ${runId}- $alevinResult counts_mtx  ${params.experimentType}
+    RUN_ID=${WorkflowParamValidator.shellQuote(runId)}
+    EXPERIMENT_TYPE=${WorkflowParamValidator.shellQuote(params.experimentType)}
+    alevinFryMtxTo10x.py --cell_prefix "\${RUN_ID}-" "$alevinResult" counts_mtx "\$EXPERIMENT_TYPE"
     """ 
 }
 
@@ -322,7 +358,8 @@ process droplet_qc_plot{
         set val(runId), file("${runId}.png") into ALEVIN_QC_PLOTS
 
     """
-    dropletBarcodePlot.R --mtx-matrix counts_mtx/matrix.mtx --label $runId --output-plot ${runId}.png
+    RUN_ID=${WorkflowParamValidator.shellQuote(runId)}
+    dropletBarcodePlot.R --mtx-matrix counts_mtx/matrix.mtx --label "\$RUN_ID" --output-plot "\${RUN_ID}.png"
     """ 
 }
 
@@ -343,9 +380,14 @@ process remove_empty_drops {
         set val(runId), file('nonempty.rds') into NONEMPTY_RDS
 
     """
+        EMPTY_DROPS_LOWER=${WorkflowParamValidator.shellQuote(params.emptyDrops.lower)}
+        EMPTY_DROPS_NITERS=${WorkflowParamValidator.shellQuote(params.emptyDrops.nIters)}
+        EMPTY_DROPS_FILTER_EMPTY=${WorkflowParamValidator.shellQuote(params.emptyDrops.filterEmpty)}
+        EMPTY_DROPS_FILTER_FDR=${WorkflowParamValidator.shellQuote(params.emptyDrops.filterFdr)}
+        MIN_CB_FREQ=${WorkflowParamValidator.shellQuote(params.minCbFreq)}
         dropletutils-read-10x-counts.R -s counts_mtx -c TRUE -o matrix.rds
-        dropletutils-empty-drops.R -i matrix.rds --lower ${params.emptyDrops.lower} --niters ${params.emptyDrops.nIters} --filter-empty ${params.emptyDrops.filterEmpty} \
-            --filter-fdr ${params.emptyDrops.filterFdr} --ignore ${params.minCbFreq} -o nonempty.rds -t nonempty.txt
+        dropletutils-empty-drops.R -i matrix.rds --lower "\$EMPTY_DROPS_LOWER" --niters "\$EMPTY_DROPS_NITERS" --filter-empty "\$EMPTY_DROPS_FILTER_EMPTY" \
+            --filter-fdr "\$EMPTY_DROPS_FILTER_FDR" --ignore "\$MIN_CB_FREQ" -o nonempty.rds -t nonempty.txt
     """
 }
 
@@ -430,4 +472,3 @@ process validate_results {
     fi
     """
 }   
-
